@@ -14,7 +14,8 @@ from sklearn.metrics import r2_score
 import numpy as np
 import pandas as pd
 import app_main.models as models
-from datetime import datetime
+from app_main.utils import Timer
+
 
 np.set_printoptions(precision=4)
 np.set_printoptions(edgeitems=8)
@@ -31,6 +32,7 @@ class ForecasterEngine:
         self._pred_feature = None
         self._pred_feature_scaler = None
         self._pred_feature_ori = None
+        self._model_gen_time = None
 
     ''' Generates a Deep Learning model for forecasting based on given data frame and options
     df - dataframe
@@ -46,9 +48,15 @@ class ForecasterEngine:
     differentiate_series - should we differentiate the target feature in order to improve its modelling'''
     def generate_model(self, df, model_type, predicted_feature, nominal_features, datetime_feature, extra_datetime_features,
                        n_steps_in, n_steps_out, n_train_epochs, differentiate_series):
+
+        timer = Timer()
+        timer.start_measure_time()
+
         # Parse to sets
         nominal_features = {} if nominal_features is None else set(nominal_features)
         # datetime_features = {} if datetime_features is None else set(datetime_features)
+        if extra_datetime_features is None:
+            extra_datetime_features = []
 
         if predicted_feature in nominal_features:
             raise Exception('Predicted feature cannot be nominal. The model predicts only numerical features.')
@@ -74,10 +82,10 @@ class ForecasterEngine:
             'LSTM': models.TimeseriesLSTMModel()
         }
 
-        timeseries_model = models_dict.get(model_type)
-        print('Class of timeseries model:', type(timeseries_model))
+        self.timeseries_model = models_dict.get(model_type)
+        print('Class of timeseries model:', type(self.timeseries_model))
 
-        X, y = timeseries_model.split_sequence(processed_sequence, n_steps_in, n_steps_out, self._pred_feature_ori)
+        X, y = self.timeseries_model.split_sequence(processed_sequence, n_steps_in, n_steps_out, self._pred_feature_ori)
 
         print('Model inputs/outputs:')
         for i in range(10):
@@ -88,11 +96,18 @@ class ForecasterEngine:
         test_size = 0.3 if len(processed_sequence) < 3333 else 1000
         X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=test_size)
 
-        timeseries_model.compile_model()
+        self.timeseries_model.compile_model()
 
-        timeseries_model.train_model(X_train, y_train, epochs=n_train_epochs)
+        self.timeseries_model.train_model(X_train, y_train, epochs=n_train_epochs)
 
-        self.predict_evaluate(timeseries_model, X_test, y_test)
+        self.predict_evaluate(self.timeseries_model, X_test, y_test)
+
+        timer.stop_measure_time()
+
+        self._model_gen_time = timer.time_elapsed
+
+        # self.timeseries_model.model_name
+        #
 
         # X, y = timeseries_model.split_sequence(sales_dataset, store_dataset, n_steps_in, n_steps_out)
         #
@@ -324,9 +339,6 @@ class ForecasterEngine:
 
         return processed_sequence
 
-
-
-
     ''' Makes prediction and evaluates trained timeseries model. Plots results of prediction'''
     def predict_evaluate(self, ts_model, X_test, y_test):
         # Inverse scaling
@@ -369,3 +381,9 @@ class ForecasterEngine:
             print(int(ts[0]), '. %.3f' % ts[1], ' - ', ts[2], ' (error=%.3f)' % ts[3], sep='')
 
         return y_dash, mae, rmse, r2_sc, mape
+
+    def model_generation_summary(self):
+        string = ''
+        string += 'Forecasting model used: {}<br>'.format(self.timeseries_model.model_name)
+        string += 'Generation time: %.3f s\n' % self._model_gen_time
+        return string

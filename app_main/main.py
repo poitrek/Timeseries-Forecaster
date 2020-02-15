@@ -1,6 +1,8 @@
 import base64
 import io
 import datetime
+import sys
+import traceback
 import time
 import pickle
 
@@ -76,8 +78,14 @@ app.layout = html.Div([
                                      'fontSize': 16,
                                      'marginLeft': '5px'
                                      })],
-                    style={'float': 'none', 'position': 'relative'}),
-            ],style={'border': '1px solid black', 'overflow': 'auto'}),
+                    style={'float': 'none',
+                           'position': 'relative',
+                           'display': 'inline',
+                           'top': '15px',
+                           'left': '10px'})],
+                # Probably this doesn't matter at all
+                # style={'overflow': 'visible'},
+                      ),
             # html.P(),
             html.Div(id='data-table',
                      style={
@@ -129,17 +137,21 @@ app.layout = html.Div([
                         html.Label(['Number of input steps:',
                                     dcc.Input(id='input-n_steps_in',
                                               type='number',
+                                              min=1,
                                               style=input_number_style)]),
                         html.P(),
                         html.Label(['Number of output steps:',
                                     dcc.Input(id='input-n_steps_out',
                                               type='number',
+                                              min=1,
                                               style=input_number_style)]),
                         html.P(),
                         html.Label(
                             children=['Number of training epochs:',
                                       dcc.Input(id='input-epochs',
                                                 type='number',
+                                                min=1,
+                                                value=40,
                                                 style=input_number_style)]),
                         html.Label('Differentiate time series'),
                         html.Label(['Do you want to subtract previous element from every observation in the predicted'
@@ -151,7 +163,7 @@ app.layout = html.Div([
                                    style={'fontSize': 16})
                     ],
                              hidden=True)
-                ], style={'border': '2px solid red'}),
+                ]),
                 html.Button(id='gen-model-button',
                             children='Generate Model',
                             style={'fontSize': 18,
@@ -175,8 +187,8 @@ app.layout = html.Div([
             html.Div([
                 html.H3('Model results'),
                 html.Div(id='model-gen-result-div',
-                         children=['Model generation progress'],
-                         hidden=False)
+                         hidden=False),
+                dcc.Loading(loading_state={'is_loading': True})
             ])
         ],
             style={'fontSize': 16})
@@ -185,11 +197,11 @@ app.layout = html.Div([
 
         ], style=tab_style, selected_style=tab_style)
     ], style={'fontSize': 20,
-              'height': '42px'})
+              'height': '44px'})
 ])
 
 
-@app.callback(Output('message-log', 'children'),
+@app.callback(Output('model-gen-result-div', 'children'),
               [Input('gen-model-button', 'n_clicks')],
               [State('model-choice', 'value'),
                State('select-predicted-feature', 'value'),
@@ -200,22 +212,55 @@ app.layout = html.Div([
                State('input-n_steps_out', 'value'),
                State('input-epochs', 'value'),
                State('chck-differentiate-series', 'value')])
-def generate_model(n_clicks, model_type, predicted_feature, nominal_features, time_features, extra_time_features,
+def generate_model(n_clicks, model_type, predicted_feature, nominal_features, time_feature, extra_time_features,
                    n_steps_in, n_steps_out, n_train_epochs, differentiate_series):
     # Get data frame from the cache
-    current_df = pickle.loads(cache.get('current_df'))
-    if current_df is None:
-        return 'No data set loaded for a model!'
-    else:
-        engine.generate_model(df=current_df, model_type=model_type, datetime_feature=time_features,
+    try:
+        current_df = cache.get('current_df')
+        current_df = pickle.loads(current_df)
+        if current_df is None:
+            raise Exception('No data set found to generate model.')
+        validate_input(predicted_feature, time_feature, n_steps_in, n_steps_out, n_train_epochs)
+        engine.generate_model(df=current_df, model_type=model_type, datetime_feature=time_feature,
                               predicted_feature=predicted_feature,
                               nominal_features=nominal_features, n_steps_in=n_steps_in, n_steps_out=n_steps_out,
                               extra_datetime_features=extra_time_features, n_train_epochs=n_train_epochs,
-                              differentiate_series=(differentiate_series != []))
+                              differentiate_series=(differentiate_series is not None))
+    except Exception as e:
+        # Show error message to proper div
+        return generate_error_message(e)
+    else:
+
         # model_cache_key = 'forecast_model_{}'.format(model_type)
         # cache.set(model_cache_key, pickle.dumps(model))
-        return 'Model generated.'
+        return create_model_gen_result_div()
 
+
+# Checks if the input for model generation is correct. Raises exception if any of the arguments is missing
+def validate_input(predicted_feature, time_feature, n_steps_in, n_steps_out, n_train_epochs):
+    if predicted_feature is None:
+        raise Exception('Please specify the predicted column.')
+    if time_feature is None:
+        raise Exception('Please specify the time-related column.')
+    if n_steps_in is None:
+        raise Exception('Please enter the number of input steps.')
+    if n_steps_out is None:
+        raise Exception('Please enter the number of output steps.')
+    if n_train_epochs is None:
+        raise Exception('Please enter the number of training epochs.')
+
+
+def generate_error_message(exception):
+    return html.Div([
+        html.H5('Error while generating model: ' + str(exception)),
+        html.Div(children=[
+            html.P(line, style={'lineHeight': '90%'}) for line in traceback.format_exc().splitlines()],
+            style={'fontSize': 16})],
+        style={'color': 'red'})
+
+def create_model_gen_result_div():
+    summary = engine.model_generation_summary()
+    return html.Div(children=summary)
 
 #
 # @cache.memoize(timeout=5000)
