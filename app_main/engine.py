@@ -387,3 +387,57 @@ class ForecasterEngine:
         string += 'Forecasting model used: {}<br>'.format(self.timeseries_model.model_name)
         string += 'Generation time: %.3f s\n' % self._model_gen_time
         return string
+
+
+class ModelEvaluator:
+
+    def __init__(self):
+        self.mae = None
+        self.rmse = None
+        self.mape = None
+        self.r2_score = None
+        self.rmspe = None
+
+    ''' Makes prediction and evaluates trained timeseries model. Plots results of prediction'''
+    def predict_evaluate(self, ts_model, X_test, y_test):
+        # Inverse scaling
+        # y_test = self._pred_feature_scaler.inverse_transform(y_test)
+        y_dash = ts_model.predict(X_test)
+        # y_dash = self._pred_feature_scaler.inverse_transform(y_dash)
+        self.y_test = copy.deepcopy(y_test)
+        self.y_dash = copy.deepcopy(y_dash)
+        print('\nPrediction / actual results:')
+        for i in range(50):
+            print(i + 1, '. ', y_dash[i], ' - ', y_test[i], sep='')
+        print('...')
+        # accuracy = ts_model.evaluate(X_test, y_test)
+        # print('Evaluated model accuracy: (mae)', accuracy)
+
+        print('\nEvaluation metrics:')
+        # Mean Absolute Error
+        mae = mean_absolute_error(y_test, y_dash)
+        print('Mean absolute error: %.3f' % mae)
+        # Root Mean Squared Error
+        rmse = np.sqrt(mean_squared_error(y_test, y_dash))
+        print('Root mean squared error: %.3f' % rmse)
+        # R^2 Score
+        r2_sc = r2_score(y_test, y_dash)
+        print('R2 Score: %.4f' % r2_sc)
+        # Mean Absolute Percentage Error
+        # This was incorrect
+        # mape = 100 * np.mean(np.abs(1 - y_test/y_dash))
+        mape = 100 * np.mean(np.abs(1 - y_dash / y_test))
+        print('Mean absolute percentage error: %.3f' % mape, '%', sep='')
+        # print('ACTUAL MAPE: %.4f' % mape_true, ' %', sep='')
+        # Root Mean Square Percentage Error
+        rmspe = np.sqrt(np.mean((1 - y_dash / y_test) ** 2))
+        print('Root mean square percentage error: %.5f' % rmspe)
+
+        tests_scores = np.stack(
+            (np.arange(len(y_test)), y_dash.flatten(), y_test.flatten(), np.abs(y_test - y_dash).flatten()), axis=-1)
+        tests_scores = tests_scores[tests_scores[:, 3].argsort()]
+        print('\nTop 5 predictions:')
+        # for i in range(5):
+        #     print(tests_scores[i, 0], '. ', tests_scores[i, 1], ' - ', tests_scores[i, 2], sep='')
+        for ts in tests_scores[:5]:
+            print(int(ts[0]), '. %.3f' % ts[1], ' - ', ts[2], ' (error=%.3f)' % ts[3], sep='')
