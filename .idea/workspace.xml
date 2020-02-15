@@ -2,8 +2,10 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="d23e0f86-2556-47b5-b4da-881edd19650f" name="Default Changelist" comment="">
+      <change afterPath="$PROJECT_DIR$/app_main/layout_learn.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/app_main/layout_predict.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app_main/engine.py" beforeDir="false" afterPath="$PROJECT_DIR$/app_main/engine.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app_main/main.py" beforeDir="false" afterPath="$PROJECT_DIR$/app_main/main.py" afterDir="false" />
     </list>
     <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
     <option name="SHOW_DIALOG" value="false" />
@@ -14,8 +16,8 @@
   <component name="FileTemplateManagerImpl">
     <option name="RECENT_TEMPLATES">
       <list>
-        <option value="Dash Plotly app" />
         <option value="Python Script" />
+        <option value="Dash Plotly app" />
       </list>
     </option>
   </component>
@@ -26,13 +28,13 @@
   <component name="ProjectLevelVcsManager" settingsEditedManually="true" />
   <component name="PropertiesComponent">
     <property name="SHARE_PROJECT_CONFIGURATION_FILES" value="true" />
-    <property name="last_opened_file_path" value="$PROJECT_DIR$/version_two/app_main" />
+    <property name="last_opened_file_path" value="$PROJECT_DIR$/app_main" />
     <property name="settings.editor.selected.configurable" value="preferences.pluginManager" />
   </component>
   <component name="RecentsManager">
     <key name="CopyFile.RECENT_KEYS">
-      <recent name="C:\Users\Piotr\PycharmProjects\TimeSeries-Forecaster\version_two\app_main" />
       <recent name="C:\Users\Piotr\PycharmProjects\TimeSeries-Forecaster\app_main" />
+      <recent name="C:\Users\Piotr\PycharmProjects\TimeSeries-Forecaster\version_two\app_main" />
       <recent name="C:\Users\Piotr\PycharmProjects\TimeSeries-Forecaster" />
       <recent name="C:\Users\Piotr\PycharmProjects\TimeSeries-Forecaster\version_first" />
     </key>
@@ -49,7 +51,7 @@
       </list>
     </option>
   </component>
-  <component name="RunManager" selected="Python.dd">
+  <component name="RunManager" selected="Python.main (1)">
     <configuration name="dd" type="PythonConfigurationType" factoryName="Python" temporary="true">
       <module name="TimeSeries-Forecaster" />
       <option name="INTERPRETER_OPTIONS" value="" />
@@ -157,8 +159,8 @@
     </configuration>
     <recent_temporary>
       <list>
-        <item itemvalue="Python.dd" />
         <item itemvalue="Python.main (1)" />
+        <item itemvalue="Python.dd" />
         <item itemvalue="Python.exception-test" />
         <item itemvalue="Python.upload-div" />
         <item itemvalue="Python.loading-component" />
