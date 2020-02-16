@@ -30,7 +30,7 @@ app.layout = html.Div(
 
 @app.callback(Output("output-1", "children"), [Input("input-1", "n_clicks")])
 def input_triggers_spinner(value):
-    time.sleep(2)
+    time.sleep(3)
     return value
 
 

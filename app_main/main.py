@@ -5,6 +5,7 @@ import sys
 import traceback
 import time
 import pickle
+import urllib.request
 
 import plotly.graph_objs as go
 import dash
@@ -59,18 +60,11 @@ app.layout = html.Div([
 
 # Define app callbacks
 
-# Helper callback
+# Helper callback for the loading component
 @app.callback(Output('model-gen-result-div', 'loading_state'),
               [Input('upload-data', 'children')])
-def test_update_lodaing(children):
+def update_div_once(children):
     return dash.no_update
-#     if n_clicks is None:
-#         return dash.no_update
-#     print('Test_update_loading(), ' + str(n_clicks) + ' clicks')
-#     if n_clicks % 2 == 0:
-#         return {'is_loading': False}
-#     else:
-#         return {'is_loading': True}
 
 
 @app.callback(Output('model-gen-result-div', 'children'),
@@ -173,12 +167,12 @@ def generate_model_results(eval_score, model, feature_name, train_set_size):
                                     margin={'l': 60, 't': 60, 'b': 40, 'r': 25},
                                     legend={'x': 0.8, 'y': 1.2})
             },
-            style={'margin': '0px'})
+                style={'margin': '0px'})
         ],
-        style={'display': 'inline-block',
-               'float': 'left',
-               'margin': '0px',
-               'padding': '0px'}),
+            style={'display': 'inline-block',
+                   'float': 'left',
+                   'margin': '0px',
+                   'padding': '0px'}),
         html.Div([
             dcc.Graph(figure={
                 'data': [
@@ -200,11 +194,11 @@ def generate_model_results(eval_score, model, feature_name, train_set_size):
                                     margin={'l': 50, 't': 60, 'b': 40, 'r': 25},
                                     legend={'x': 0.8, 'y': 1.2})
             },
-            style={'margin': '0px'})
+                style={'margin': '0px'})
         ],
-        style={'display': 'inline-block',
-               'margin': '0px',
-               'padding': '0px'})
+            style={'display': 'inline-block',
+                   'margin': '0px',
+                   'padding': '0px'})
     ])
 
 
@@ -279,16 +273,10 @@ def parse_file_contents(content, filename, date, separator):
         dash_table.DataTable(
             data=df.head(rows_limit).to_dict('records'),
             columns=[{'name': i, 'id': i} for i in df.columns],
-            style={'width': '100%', 'overflow': 'scroll'}
+            style_table={'width': '100%', 'overflow': 'scroll'}
         )
     ],
         style={'marginTop': '10px'})
-
-
-@app.callback(Output('export-model-button', 'children'),
-              Input('export-model-button', 'n_clicks'))
-def export_model(n_clicks):
-    pass
 
 
 # Enables/disables button whether data table is loaded or not
@@ -342,23 +330,21 @@ def generate_select_predicted_feature_div():
                          multi=False)]
 
 
-@app.callback([Output('export-model-div', 'children'),
-               Output('export-model-div', 'hidden')],
-               Input('model-gen-result-div', 'children'))
+@app.callback([Output('export-model-div', 'hidden'),
+               Output('export-model-button', 'href')],
+              [Input('model-gen-result-div', 'children')])
 def update_export_model_div(children):
     global is_model_ready
     if is_model_ready:
-        return generate_export_model_div(), False
+        return False, generate_export_href()
     else:
-        return [], True
+        return True, ''
 
 
-def generate_export_model_div():
-    return html.Div([
-        html.Button(id='export-model-button',
-                    children='Export model to file')
-    ])
-
+def generate_export_href():
+    model_serial = pickle.dumps(engine.timeseries_model)
+    file_string = 'data:text/plain;charset=utf-8,' + urllib.request.quote(model_serial)
+    return file_string
 
 
 if __name__ == '__main__':

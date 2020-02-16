@@ -55,7 +55,7 @@ tab_learn_section = html.Div([
     # html.P(),
     html.Div(id='data-table',
              style={
-                 'width': '90%',
+                 'width': '94%',
                  'paddinLeft': '20px',
                  'paddingTop': '20px',
              }),
@@ -158,11 +158,28 @@ tab_learn_section = html.Div([
         dcc.Loading(id='loading-1', children=[
             html.Div(id='model-gen-result-div',
                      hidden=False,
-                     loading_state={'is_loading': False}),
+                     loading_state={'is_loading': True}),
         ],
-            type='circle')
+            type='circle'),
+        html.Div(children='Generating model...',
+                 id='loading-msg',
+                 hidden=True,
+                 style={'align': 'center',
+                        'fontSize': 20})
     ]),
     html.Div(id='export-model-div',
+             children=[
+                 html.A(id='export-model-button',
+                        children=html.Button('Export model to file',
+                                             style={'fontSize': 16,
+                                                    'color': '#1966b3',
+                                                    'borderColor': '#1966b3'}
+                                             ),
+                        download='forecast-model.txt',
+                        href='',
+                        target='_blank',
+                        )
+             ],
              hidden=True)
 ],
     style={'fontSize': 16})
