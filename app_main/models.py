@@ -27,7 +27,7 @@ import sklearn.model_selection as sk_ms
 class TimeseriesModel:
         
     def __init__(self, predicted_feature, nominal_features, datetime_feature, extra_datetime_features,
-                 n_steps_in, n_steps_out, scale_predicted_feature=True):
+                 n_steps_in, n_steps_out, data_filename, scale_predicted_feature=True):
         self._predicted_feature = predicted_feature
         self._nominal_features = nominal_features
         self._datetime_feature = datetime_feature
@@ -37,7 +37,7 @@ class TimeseriesModel:
         self._keras_model = None
         self._pred_feature_scaler = None
         self._scale_predicted_feature = scale_predicted_feature
-    
+        self.data_filename = data_filename
 
     # def __init__(self):
     #     self._keras_model = None

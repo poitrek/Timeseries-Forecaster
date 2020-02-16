@@ -27,7 +27,7 @@ class ForecasterEngine:
         # self._model_gen_time = None
 
     def init_model(self, df, model_type, predicted_feature, nominal_features, datetime_feature, extra_datetime_features,
-                   n_steps_in, n_steps_out, differentiate_series):
+                   n_steps_in, n_steps_out, data_filename):
         # Parse to sets
         nominal_features = {} if nominal_features is None else set(nominal_features)
         # datetime_features = {} if datetime_features is None else set(datetime_features)
@@ -45,15 +45,15 @@ class ForecasterEngine:
         if model_type == 'MLP':
             self.timeseries_model = models.TimeseriesMLPModel(predicted_feature, nominal_features, datetime_feature,
                                                               extra_datetime_features, n_steps_in, n_steps_out,
-                                                              scale_predicted_feature=True)
+                                                              data_filename, scale_predicted_feature=True)
         elif model_type == 'CNN':
             self.timeseries_model = models.TimeseriesCNNModel(predicted_feature, nominal_features, datetime_feature,
                                                               extra_datetime_features, n_steps_in, n_steps_out,
-                                                              scale_predicted_feature=True)
+                                                              data_filename, scale_predicted_feature=True)
         elif model_type == 'LSTM':
             self.timeseries_model = models.TimeseriesLSTMModel(predicted_feature, nominal_features, datetime_feature,
                                                                extra_datetime_features, n_steps_in, n_steps_out,
-                                                               scale_predicted_feature=True)
+                                                               data_filename, scale_predicted_feature=True)
         else:
             raise Exception('Error initializing model. Model type either not specified or invalid. '
                             'Got model type: \'{}\''.format(model_type))

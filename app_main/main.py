@@ -19,6 +19,8 @@ import numpy as np
 from app_main.engine import ForecasterEngine
 from app_main.layout_learn import tab_learn_section
 from app_main.layout_predict import tab_predict_section
+from app_main.utils import Timer
+
 
 external_stylesheets = ['https://codepen.io/chriddyp/pen/bWLwgP.css']
 
@@ -67,7 +69,8 @@ def update_div_once(children):
     return dash.no_update
 
 
-@app.callback(Output('model-gen-result-div', 'children'),
+@app.callback([Output('model-gen-result-div', 'children'),
+               Output('current-model-info', 'children')],
               [Input('gen-model-button', 'n_clicks')],
               [State('model-choice', 'value'),
                State('select-predicted-feature', 'value'),
@@ -77,14 +80,16 @@ def update_div_once(children):
                State('input-n_steps_in', 'value'),
                State('input-n_steps_out', 'value'),
                State('input-epochs', 'value'),
-               State('chck-differentiate-series', 'value')])
+               State('upload-data', 'filename')])
 def generate_and_evaluate_model(n_clicks, model_type, predicted_feature, nominal_features, time_feature,
                                 extra_time_features,
-                                n_steps_in, n_steps_out, n_train_epochs, differentiate_series):
+                                n_steps_in, n_steps_out, n_train_epochs, data_filename):
     print('Generate_and_evaluate_model()')
     global is_model_ready
     # Get data frame from the cache
     try:
+        timer = Timer()
+        timer.start_measure_time()
         current_df = cache.get('current_df')
         if current_df is None:
             raise Exception('No data set found to generate model.')
@@ -93,20 +98,25 @@ def generate_and_evaluate_model(n_clicks, model_type, predicted_feature, nominal
         dataset = engine.init_model(df=current_df, model_type=model_type, datetime_feature=time_feature,
                                     predicted_feature=predicted_feature,
                                     nominal_features=nominal_features, n_steps_in=n_steps_in, n_steps_out=n_steps_out,
-                                    extra_datetime_features=extra_time_features,
-                                    differentiate_series=(differentiate_series is not None))
+                                    extra_datetime_features=extra_time_features, data_filename=data_filename)
         train_set, test_set = engine.split_train_test(dataset)
         engine.train_model(train_set, epochs=n_train_epochs)
         eval_score = engine.evaluate_model(test_set)
+        timer.stop_measure_time()
     except Exception as e:
         # Show error message to proper div
         is_model_ready = False
-        return generate_error_message(e)
+        results = generate_error_message(e)
+        model_info = html.H5('No currently generated model.')
     else:
         # model_cache_key = 'forecast_model_{}'.format(model_type)
         # cache.set(model_cache_key, pickle.dumps(model))
         is_model_ready = True
-        return generate_model_results(eval_score, engine.timeseries_model, predicted_feature, len(train_set[0]))
+        results = generate_model_results(eval_score, engine.timeseries_model.model_name, predicted_feature,
+                                         len(train_set[0]), timer.time_elapsed)
+        model_info = generate_current_model_info(engine.timeseries_model.model_name, data_filename)
+    finally:
+        return results, model_info
 
 
 # Checks if the input for model generation is correct. Raises exception if any of the arguments is missing
@@ -132,22 +142,13 @@ def generate_error_message(exception):
         style={'color': 'red'})
 
 
-def generate_model_results(eval_score, model, feature_name, train_set_size):
+def generate_model_results(eval_score, model_name, feature_name, train_set_size, generation_time):
     eval_score.y_dash = eval_score.y_dash.flatten()
     eval_score.y_test = eval_score.y_test.flatten()
     min_value = min(eval_score.y_test.min(), eval_score.y_dash.min())
     max_value = max(eval_score.y_test.max(), eval_score.y_dash.max())
     return html.Div([
         html.H3('Model generation results'),
-        html.Div([
-            html.H6('Used forecasting model: {}'.format(model.model_name)),
-            html.H6('Training set size: {:d}'.format(train_set_size)),
-            html.H6('Tested samples: {}'.format(len(eval_score.y_test))),
-            html.H6('Mean absolute error: {:.3f}'.format(eval_score.mae)),
-            html.H6('Root mean squared error: {:.3f}'.format(eval_score.rmse)),
-            html.H6('R2 Score: {:.3f}'.format(eval_score.r2_score)),
-            html.H6('Mean absolute percentage error: {:.3f}'.format(eval_score.mape))
-        ]),
         html.Div([
             dcc.Graph(figure={
                 'data':
@@ -198,35 +199,22 @@ def generate_model_results(eval_score, model, feature_name, train_set_size):
         ],
             style={'display': 'inline-block',
                    'margin': '0px',
-                   'padding': '0px'})
+                   'padding': '0px'}),
+        html.Div([
+            html.H6('Used forecasting model: {}'.format(model_name)),
+            html.H6('Generation time: {:.2f} s'.format(generation_time)),
+            html.H6('Training set size: {:d}'.format(train_set_size)),
+            html.H6('Tested samples: {}'.format(len(eval_score.y_test))),
+            html.H6('Mean absolute error: {:.3f}'.format(eval_score.mae)),
+            html.H6('Root mean squared error: {:.3f}'.format(eval_score.rmse)),
+            html.H6('R2 Score: {:.3f}'.format(eval_score.r2_score)),
+            html.H6('Mean absolute percentage error: {:.3f} %'.format(eval_score.mape))
+        ]),
     ])
 
 
-#
-# @cache.memoize(timeout=5000)
-# def get_tangent_plot_data():
-#     x = np.linspace(-5.0, 5.0, 150)
-#     time.sleep(5)
-#     tan_x = np.tan(x)
-#     scatter = go.Scatter(x=x,
-#                          y=tan_x,
-#                          mode='lines+markers')
-#     serial_scatter = pickle.dumps(scatter)
-#     # print('Pickled data (before caching):')
-#     # print(serial_scatter)
-#     return serial_scatter
-
-#
-# @app.callback(Output('plot-1', 'figure'),
-#               [Input('generate-button', 'n_clicks')])
-# def update_plot(n_clicks):
-#     data = pickle.loads(get_tangent_plot_data())
-#     # print('Unpickled data:')
-#     # print(data)
-#     return {'data': [data],
-#             'layout': go.Layout(title='Tangent function plot',
-#                                 xaxis={'title': 'x'},
-#                                 yaxis={'title': 'y'})}
+def generate_current_model_info(model_type, data_filename):
+    return html.H5('Current model: {} used for {}'.format(model_type, data_filename))
 
 
 # Updates the data table Div on uploading a CSV file
