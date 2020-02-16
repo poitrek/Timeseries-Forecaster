@@ -12,6 +12,8 @@ input_number_style = {
 
 tab_learn_section = html.Div([
     html.H3('Upload data set'),
+    # html.Button(id='update-loading-button',
+    #             children='Stop updating'),
     html.Div([
         dcc.Upload(
             id='upload-data',
@@ -34,7 +36,7 @@ tab_learn_section = html.Div([
         html.Label([
             'Separator:',
             dcc.Input(id='upload-sep',
-                      value=';',
+                      value=',',
                       maxLength=1,
                       style={'width': '30px',
                              'height': '33px',
@@ -55,7 +57,7 @@ tab_learn_section = html.Div([
              style={
                  'width': '90%',
                  'paddinLeft': '20px',
-                 'paddingTop': '20px'
+                 'paddingTop': '20px',
              }),
 
     html.Div(id='model-gen-setup-div', children=
@@ -101,12 +103,16 @@ tab_learn_section = html.Div([
                 html.Label(['Number of input steps:',
                             dcc.Input(id='input-n_steps_in',
                                       type='number',
+                                      # Temporary
+                                      value=6,
                                       min=1,
                                       style=input_number_style)]),
                 html.P(),
                 html.Label(['Number of output steps:',
                             dcc.Input(id='input-n_steps_out',
                                       type='number',
+                                      # Temporary
+                                      value=1,
                                       min=1,
                                       style=input_number_style)]),
                 html.P(),
@@ -139,20 +145,24 @@ tab_learn_section = html.Div([
                     disabled=True),
         html.Div(id='message-log')
     ],
-     style={
-         'width': '90%',
-         'border': '1px solid grey',
-         'position': 'relative',
-         'marginTop': '10px',
-         'fontSize': 18,
-         'padding': '6px',
-         'overflow': 'auto'
-     }),
-    html.Div([
-        html.H3('Model results'),
-        html.Div(id='model-gen-result-div',
-                 hidden=False),
-        dcc.Loading(loading_state={'is_loading': True})
-    ])
+             style={
+                 'width': '90%',
+                 'border': '1px solid grey',
+                 'position': 'relative',
+                 'marginTop': '10px',
+                 'fontSize': 18,
+                 'padding': '6px',
+                 'overflow': 'auto'
+             }),
+    html.Div(id='bottom-div', children=[
+        dcc.Loading(id='loading-1', children=[
+            html.Div(id='model-gen-result-div',
+                     hidden=False,
+                     loading_state={'is_loading': False}),
+        ],
+            type='circle')
+    ]),
+    html.Div(id='export-model-div',
+             hidden=True)
 ],
     style={'fontSize': 16})

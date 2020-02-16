@@ -26,6 +26,7 @@ app = dash.Dash(suppress_callback_exceptions=True,
 
 # Global instance of the engine (cannot be done any other way)
 engine = ForecasterEngine()
+is_model_ready = False
 
 cache = Cache(app=app.server, config={'CACHE_TYPE': 'filesystem',
                                       'CACHE_DIR': 'app-cache'})
@@ -35,7 +36,6 @@ tab_style = {
     'color': '#606060',
     'borderBottom': '1px solid #d6d6d6',
 }
-
 
 # App layout - consists of two tabs (sections) - learning and prediction
 
@@ -59,6 +59,19 @@ app.layout = html.Div([
 
 # Define app callbacks
 
+# Helper callback
+@app.callback(Output('model-gen-result-div', 'loading_state'),
+              [Input('upload-data', 'children')])
+def test_update_lodaing(children):
+    return dash.no_update
+#     if n_clicks is None:
+#         return dash.no_update
+#     print('Test_update_loading(), ' + str(n_clicks) + ' clicks')
+#     if n_clicks % 2 == 0:
+#         return {'is_loading': False}
+#     else:
+#         return {'is_loading': True}
+
 
 @app.callback(Output('model-gen-result-div', 'children'),
               [Input('gen-model-button', 'n_clicks')],
@@ -71,28 +84,35 @@ app.layout = html.Div([
                State('input-n_steps_out', 'value'),
                State('input-epochs', 'value'),
                State('chck-differentiate-series', 'value')])
-def generate_model(n_clicks, model_type, predicted_feature, nominal_features, time_feature, extra_time_features,
-                   n_steps_in, n_steps_out, n_train_epochs, differentiate_series):
+def generate_and_evaluate_model(n_clicks, model_type, predicted_feature, nominal_features, time_feature,
+                                extra_time_features,
+                                n_steps_in, n_steps_out, n_train_epochs, differentiate_series):
+    print('Generate_and_evaluate_model()')
+    global is_model_ready
     # Get data frame from the cache
     try:
         current_df = cache.get('current_df')
-        current_df = pickle.loads(current_df)
         if current_df is None:
             raise Exception('No data set found to generate model.')
+        current_df = pickle.loads(current_df)
         validate_input(predicted_feature, time_feature, n_steps_in, n_steps_out, n_train_epochs)
-        engine.generate_model(df=current_df, model_type=model_type, datetime_feature=time_feature,
-                              predicted_feature=predicted_feature,
-                              nominal_features=nominal_features, n_steps_in=n_steps_in, n_steps_out=n_steps_out,
-                              extra_datetime_features=extra_time_features, n_train_epochs=n_train_epochs,
-                              differentiate_series=(differentiate_series is not None))
+        dataset = engine.init_model(df=current_df, model_type=model_type, datetime_feature=time_feature,
+                                    predicted_feature=predicted_feature,
+                                    nominal_features=nominal_features, n_steps_in=n_steps_in, n_steps_out=n_steps_out,
+                                    extra_datetime_features=extra_time_features,
+                                    differentiate_series=(differentiate_series is not None))
+        train_set, test_set = engine.split_train_test(dataset)
+        engine.train_model(train_set, epochs=n_train_epochs)
+        eval_score = engine.evaluate_model(test_set)
     except Exception as e:
         # Show error message to proper div
+        is_model_ready = False
         return generate_error_message(e)
     else:
-
         # model_cache_key = 'forecast_model_{}'.format(model_type)
         # cache.set(model_cache_key, pickle.dumps(model))
-        return create_model_gen_result_div()
+        is_model_ready = True
+        return generate_model_results(eval_score, engine.timeseries_model, predicted_feature, len(train_set[0]))
 
 
 # Checks if the input for model generation is correct. Raises exception if any of the arguments is missing
@@ -118,9 +138,74 @@ def generate_error_message(exception):
         style={'color': 'red'})
 
 
-def create_model_gen_result_div():
-    summary = engine.model_generation_summary()
-    return html.Div(children=summary)
+def generate_model_results(eval_score, model, feature_name, train_set_size):
+    eval_score.y_dash = eval_score.y_dash.flatten()
+    eval_score.y_test = eval_score.y_test.flatten()
+    min_value = min(eval_score.y_test.min(), eval_score.y_dash.min())
+    max_value = max(eval_score.y_test.max(), eval_score.y_dash.max())
+    return html.Div([
+        html.H3('Model generation results'),
+        html.Div([
+            html.H6('Used forecasting model: {}'.format(model.model_name)),
+            html.H6('Training set size: {:d}'.format(train_set_size)),
+            html.H6('Tested samples: {}'.format(len(eval_score.y_test))),
+            html.H6('Mean absolute error: {:.3f}'.format(eval_score.mae)),
+            html.H6('Root mean squared error: {:.3f}'.format(eval_score.rmse)),
+            html.H6('R2 Score: {:.3f}'.format(eval_score.r2_score)),
+            html.H6('Mean absolute percentage error: {:.3f}'.format(eval_score.mape))
+        ]),
+        html.Div([
+            dcc.Graph(figure={
+                'data':
+                    [go.Scatter(y=eval_score.y_test,
+                                mode='markers',
+                                name='Real'),
+                     go.Scatter(y=eval_score.y_dash,
+                                mode='markers',
+                                name='Predicted')],
+                'layout': go.Layout(title='{} - Real vs Predicted'.format(feature_name),
+                                    xaxis={'title': 'Sample no.'},
+                                    yaxis={'title': feature_name},
+                                    autosize=False,
+                                    width=700,
+                                    height=500,
+                                    paper_bgcolor="#eef",
+                                    margin={'l': 60, 't': 60, 'b': 40, 'r': 25},
+                                    legend={'x': 0.8, 'y': 1.2})
+            },
+            style={'margin': '0px'})
+        ],
+        style={'display': 'inline-block',
+               'float': 'left',
+               'margin': '0px',
+               'padding': '0px'}),
+        html.Div([
+            dcc.Graph(figure={
+                'data': [
+                    go.Scatter(x=eval_score.y_test,
+                               y=eval_score.y_dash,
+                               mode='markers'),
+                    go.Scatter(x=[min_value, max_value],
+                               y=[min_value, max_value],
+                               mode='lines',
+                               name='y = x')
+                ],
+                'layout': go.Layout(title='Q-Q plot',
+                                    xaxis={'title': 'Real'},
+                                    yaxis={'title': 'Predicted'},
+                                    autosize=False,
+                                    width=520,
+                                    height=500,
+                                    paper_bgcolor="#eee",
+                                    margin={'l': 50, 't': 60, 'b': 40, 'r': 25},
+                                    legend={'x': 0.8, 'y': 1.2})
+            },
+            style={'margin': '0px'})
+        ],
+        style={'display': 'inline-block',
+               'margin': '0px',
+               'padding': '0px'})
+    ])
 
 
 #
@@ -157,6 +242,7 @@ def create_model_gen_result_div():
                State('upload-data', 'last_modified'),
                State('upload-sep', 'value')])
 def upload_data_set(content, filename, filedate, file_separator):
+    print('Upload_data_set()')
     if content is not None:
         children = [
             parse_file_contents(content, filename, filedate, file_separator)
@@ -193,9 +279,16 @@ def parse_file_contents(content, filename, date, separator):
         dash_table.DataTable(
             data=df.head(rows_limit).to_dict('records'),
             columns=[{'name': i, 'id': i} for i in df.columns],
+            style={'width': '100%', 'overflow': 'scroll'}
         )
     ],
         style={'marginTop': '10px'})
+
+
+@app.callback(Output('export-model-button', 'children'),
+              Input('export-model-button', 'n_clicks'))
+def export_model(n_clicks):
+    pass
 
 
 # Enables/disables button whether data table is loaded or not
@@ -247,6 +340,25 @@ def generate_select_predicted_feature_div():
     return [html.Label('Which attribute do you want to predict?'),
             dcc.Dropdown(id='select-predicted-feature', options=col_options,
                          multi=False)]
+
+
+@app.callback([Output('export-model-div', 'children'),
+               Output('export-model-div', 'hidden')],
+               Input('model-gen-result-div', 'children'))
+def update_export_model_div(children):
+    global is_model_ready
+    if is_model_ready:
+        return generate_export_model_div(), False
+    else:
+        return [], True
+
+
+def generate_export_model_div():
+    return html.Div([
+        html.Button(id='export-model-button',
+                    children='Export model to file')
+    ])
+
 
 
 if __name__ == '__main__':

@@ -13,6 +13,14 @@ div{
     width: 45%;
 }
 
+#model-gen-result-div{
+    width: auto;
+    display: inline-block;
+}
+
+#bottom-div{
+}
+
 /* Table of contents
 ––––––––––––––––––––––––––––––––––––––––––––––––––
 - Plotly.js
