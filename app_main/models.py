@@ -21,14 +21,16 @@ import pandas as pd
 import numpy as np
 import copy
 import sklearn.model_selection as sk_ms
+import tensorflow as tf
 # import keras.backend.tensorflow_backend as tb
 # tb._SYMBOLIC_SCOPE.value = True
+tf_graph = tf.get_default_graph()
 
 
 class TimeseriesModel:
-        
+
     def __init__(self, predicted_feature, nominal_features, datetime_feature, extra_datetime_features,
-                 n_steps_in, n_steps_out, data_filename, scale_predicted_feature=True):
+                 n_steps_in, n_steps_out, data_filename, scale_predicted_feature=True, pred_feature_on_input=False):
         self.predicted_feature = predicted_feature
         self._nominal_features = nominal_features
         self._datetime_feature = datetime_feature
@@ -37,8 +39,17 @@ class TimeseriesModel:
         self._n_steps_out = n_steps_out
         self._keras_model = None
         self._pred_feature_scaler = None
-        self._scale_predicted_feature = scale_predicted_feature
         self.data_filename = data_filename
+        self._scale_predicted_feature = scale_predicted_feature
+        self._pred_feature_on_input = pred_feature_on_input
+        self._datetime_array = None
+        # Initialize own session and graph for the keras model
+        # self.__session = tf.Session()
+        # self.__graph = tf.get_default_graph()
+
+
+    def get_model_info(self):
+        return '{} used for \'{}\' data set'.format(self.model_name, self.data_filename)
 
     # def __init__(self):
     #     self._keras_model = None
@@ -47,11 +58,11 @@ class TimeseriesModel:
     def prepare_data(self, df, mode):
         df_extra_datetime = self._extract_datetime_features(df)
         if mode == 'training':
-            processed_sequence, target_feature = self._preprocess(df, df_extra_datetime)
+            processed_sequence, target_feature = self._preprocess(df, df_extra_datetime, mode)
             X, y = self._split_sequence(processed_sequence, target_feature, mode)
             return X, y
         elif mode == 'testing':
-            processed_sequence, _ = self._preprocess(df, df_extra_datetime)
+            processed_sequence, _ = self._preprocess(df, df_extra_datetime, mode)
             X, _ = self._split_sequence(processed_sequence, None, mode)
             return X, None
         else:
@@ -64,6 +75,7 @@ class TimeseriesModel:
     def _extract_datetime_features(self, df):
         # Parse to datetime. If fails, an exception will be raised
         parsed_feature = pd.to_datetime(df[self._datetime_feature])
+        self._datetime_array = parsed_feature
         df_extra = pd.DataFrame()
         # Check for every label of extra feature, if is present in the list
         # If so, add an extra column to the dataframe
@@ -93,7 +105,7 @@ class TimeseriesModel:
        nominal_features - set of nominal features of the data set
        extra_datetime_features - list of date/time features that are extracted from the time-related feature
                                  (year, month, hour, minute,...)'''
-    def _preprocess(self, df, df_extra_datetime):
+    def _preprocess(self, df, df_extra_datetime, mode):
 
         # Sort dataframe by the time-related column
         df = df.sort_values(by=[self._datetime_feature])
@@ -101,16 +113,18 @@ class TimeseriesModel:
         # Set of all features
         all_features = set(df.columns)
 
-        # Set of numerical features
+        # Set of numerical features = all \ (nominal U {datetime})
         numerical_features = all_features.difference(self._nominal_features, {self._datetime_feature})
+
+        if not self._pred_feature_on_input:
+            # Do not use predicted feature as input
+            numerical_features = numerical_features.difference({self.predicted_feature})
 
         # if self.predicted_feature not in numerical_features:
         #     raise Exception('Predicted feature not found among numerical features. Please choose the feature you'
         #                     ' want to predict from existing numerical columns.')
 
         processed_features = []
-        target_feature = None
-        target_feature_scaled = None
 
         # Choose a scaler to normalize/standardize numeric data
         # scaler = MinMaxScaler(feature_range=(0, 1))
@@ -132,11 +146,6 @@ class TimeseriesModel:
             # Normalize
             feature_sc = scaler.fit_transform(feature)
             processed_features.append(feature_sc)
-            if feature_name == self.predicted_feature:
-                # Remember the predicted feature and its scale
-                self._pred_feature_scaler = copy.deepcopy(scaler)
-                target_feature_scaled = feature_sc
-                target_feature = feature
 
         oneHotEncoder = OneHotEncoder()
         imputer_dominant = SimpleImputer(missing_values=np.nan, strategy='most_frequent')
@@ -178,14 +187,24 @@ class TimeseriesModel:
                 processed_features.append(feature_sin)
                 processed_features.append(feature_cos)
 
+        if mode == 'training':
+            # Preprocess the target feature
+            target_feature = array(df[self.predicted_feature])
+            target_feature = target_feature.reshape((target_feature.shape[0], 1))
+            if pd.isna(target_feature).any():
+                target_feature = imputer_median.fit_transform(target_feature)
+            if self._scale_predicted_feature:
+                target_feature = scaler.fit_transform(target_feature)
+                # Remember the scaler in order to use it back in prediction
+                self._pred_feature_scaler = copy.deepcopy(scaler)
+        else:
+            target_feature = None
+
         # Stack horizontally to get a 2D array
         processed_sequence = hstack(processed_features)
 
-        # Return the processed sequence and separately the target feature (scaled or original)
-        if self._scale_predicted_feature:
-            return processed_sequence, target_feature_scaled
-        else:
-            return processed_sequence, target_feature
+        # Return the processed sequence and separately the target feature
+        return processed_sequence, target_feature
 
     ''' Splits prepared sequence into input and output series (X and y) for the model
     sequence - 2D array of preprocessed features
@@ -198,20 +217,40 @@ class TimeseriesModel:
     def train_test_split(self, X, y, test_size=0.1):
         pass
 
+    def build_model(self):
+        global tf_graph
+        with tf_graph.as_default():
+            self._compile_model()
+        # with self.__graph.as_default():
+        #     with self.__session.as_default():
+        #         self._compile_model()
+
     ''' Compiles inner Keras model according to the number
         of steps and features on both input and output'''
-    def compile_model(self):
+    def _compile_model(self):
         pass
 
     def train_model(self, X, y, epochs):
-        self._keras_model.fit(X, y, epochs=epochs, verbose=2)
+        global tf_graph
+        with tf_graph.as_default():
+            self._keras_model.fit(X, y, epochs=epochs, verbose=2)
+        # with self.__graph.as_default():
+        #     with self.__session.as_default():
+        #         self._keras_model.fit(X, y, epochs=epochs, verbose=2)
         self._n_epochs_used = epochs
 
-    def evaluate(self, X, y):
-        return self._keras_model.evaluate(X, y, verbose=1)
+    # def evaluate(self, X, y):
+    #     with self.__graph.as_default():
+    #         with self.__session.as_default():
+    #             return self._keras_model.evaluate(X, y, verbose=1)
 
     def predict(self, X):
-        y_dash = self._keras_model.predict(X, verbose=1)
+        global tf_graph
+        with tf_graph.as_default():
+            y_dash = self._keras_model.predict(X, verbose=1)
+        # with self.__graph.as_default():
+        #     with self.__session.as_default():
+        #         y_dash = self._keras_model.predict(X, verbose=1)
         # If the target feature was scaled, then we have to transform it back
         if self._scale_predicted_feature:
             return self._pred_feature_scaler.inverse_transform(y_dash)
@@ -222,6 +261,8 @@ class TimeseriesModel:
     def rescale_target_feature(self, feature):
         return self._pred_feature_scaler.inverse_transform(feature)
 
+    def get_datetime_array(self):
+        return self._datetime_array
 
     def get_train_test_size(self, X_train, X_test):
         return X_train.shape[0], X_test.shape[0]
@@ -267,7 +308,7 @@ class TimeseriesMLPModel(TimeseriesModel):
     def train_test_split(self, X, y, test_size=0.1):
         return sk_ms.train_test_split(X, y, test_size=test_size, shuffle=True)
 
-    def compile_model(self):
+    def _compile_model(self):
 
         self._keras_model = Sequential(name=self.model_name)
         self._keras_model.add(Dense(64, input_dim=self._n_inputs, activation='relu',
@@ -316,16 +357,16 @@ class TimeseriesCNNModel(TimeseriesModel):
             return array(X), array(y)
         else:
             X = list()
-            for i in range(0, len(sequence - self._n_steps_in - self._n_steps_out)):
+            for i in range(0, len(sequence) - self._n_steps_in - self._n_steps_out):
                 # End index of the input series
                 idx_in_end = i + self._n_steps_in
-                X.append(sequence[i: idx_in_end])
+                X.append(sequence[i: idx_in_end, :])
             return array(X), None
 
     def train_test_split(self, X, y, test_size=0.1):
         return sk_ms.train_test_split(X, y, test_size=test_size, shuffle=True)
 
-    def compile_model(self):
+    def _compile_model(self):
         kernel_size = min(6, self._n_steps_in - 2)
         self._keras_model = Sequential()
         self._keras_model.add(Conv1D(filters=32, kernel_size=kernel_size, activation='relu',
@@ -371,16 +412,16 @@ class TimeseriesLSTMModel(TimeseriesModel):
             return array(X), array(y)
         else:
             X = list()
-            for i in range(0, len(sequence - self._n_steps_in - self._n_steps_out)):
+            for i in range(0, len(sequence) - self._n_steps_in - self._n_steps_out):
                 # End index of the input series
                 idx_in_end = i + self._n_steps_in
-                X.append(sequence[i: idx_in_end])
+                X.append(sequence[i: idx_in_end, :])
             return array(X), None
 
     def train_test_split(self, X, y, test_size=0.1):
         return sk_ms.train_test_split(X, y, test_size=test_size, shuffle=True)
 
-    def compile_model(self):
+    def _compile_model(self):
         self._keras_model = Sequential()
         self._keras_model.add(LSTM(units=24, activation='relu', input_shape=(self._n_steps_in, self._n_features_in),
                              return_sequences=True))

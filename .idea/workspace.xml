@@ -2,11 +2,13 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="d23e0f86-2556-47b5-b4da-881edd19650f" name="Default Changelist" comment="">
+      <change afterPath="$PROJECT_DIR$/operations_on_datasets/population-set.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app_main/engine.py" beforeDir="false" afterPath="$PROJECT_DIR$/app_main/engine.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/app_main/layout_predict.py" beforeDir="false" afterPath="$PROJECT_DIR$/app_main/layout_predict.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/app_main/main.py" beforeDir="false" afterPath="$PROJECT_DIR$/app_main/main.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/app_main/models.py" beforeDir="false" afterPath="$PROJECT_DIR$/app_main/models.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app_main/module_predict.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/app_main/utils.py" beforeDir="false" afterPath="$PROJECT_DIR$/app_main/utils.py" afterDir="false" />
     </list>
     <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
     <option name="SHOW_DIALOG" value="false" />
@@ -57,7 +59,7 @@
     </option>
   </component>
   <component name="RunManager" selected="Python.main">
-    <configuration name="join-date-time-cols" type="PythonConfigurationType" factoryName="Python" temporary="true">
+    <configuration name="layout-learn" type="PythonConfigurationType" factoryName="Python" temporary="true">
       <module name="TimeSeries-Forecaster" />
       <option name="INTERPRETER_OPTIONS" value="" />
       <option name="PARENT_ENVS" value="true" />
@@ -65,11 +67,11 @@
         <env name="PYTHONUNBUFFERED" value="1" />
       </envs>
       <option name="SDK_HOME" value="" />
-      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/operations_on_datasets" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/single_test_programs" />
       <option name="IS_MODULE_SDK" value="true" />
       <option name="ADD_CONTENT_ROOTS" value="true" />
       <option name="ADD_SOURCE_ROOTS" value="true" />
-      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/operations_on_datasets/join-date-time-cols.py" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/single_test_programs/layout-learn.py" />
       <option name="PARAMETERS" value="" />
       <option name="SHOW_COMMAND_LINE" value="false" />
       <option name="EMULATE_TERMINAL" value="false" />
@@ -120,6 +122,27 @@
       <option name="INPUT_FILE" value="" />
       <method v="2" />
     </configuration>
+    <configuration name="population-set" type="PythonConfigurationType" factoryName="Python" temporary="true">
+      <module name="TimeSeries-Forecaster" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <envs>
+        <env name="PYTHONUNBUFFERED" value="1" />
+      </envs>
+      <option name="SDK_HOME" value="" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/operations_on_datasets" />
+      <option name="IS_MODULE_SDK" value="true" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/operations_on_datasets/population-set.py" />
+      <option name="PARAMETERS" value="" />
+      <option name="SHOW_COMMAND_LINE" value="false" />
+      <option name="EMULATE_TERMINAL" value="false" />
+      <option name="MODULE_MODE" value="false" />
+      <option name="REDIRECT_INPUT" value="false" />
+      <option name="INPUT_FILE" value="" />
+      <method v="2" />
+    </configuration>
     <configuration name="trim-train-dataset (1)" type="PythonConfigurationType" factoryName="Python" temporary="true">
       <module name="TimeSeries-Forecaster" />
       <option name="INTERPRETER_OPTIONS" value="" />
@@ -141,34 +164,13 @@
       <option name="INPUT_FILE" value="" />
       <method v="2" />
     </configuration>
-    <configuration name="trim-train-dataset" type="PythonConfigurationType" factoryName="Python" temporary="true">
-      <module name="TimeSeries-Forecaster" />
-      <option name="INTERPRETER_OPTIONS" value="" />
-      <option name="PARENT_ENVS" value="true" />
-      <envs>
-        <env name="PYTHONUNBUFFERED" value="1" />
-      </envs>
-      <option name="SDK_HOME" value="" />
-      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/single_test_programs" />
-      <option name="IS_MODULE_SDK" value="true" />
-      <option name="ADD_CONTENT_ROOTS" value="true" />
-      <option name="ADD_SOURCE_ROOTS" value="true" />
-      <option name="SCRIPT_NAME" value="C:\Users\Piotr\PycharmProjects\TimeSeries-Forecaster\operations_on_datasets\trim-train-dataset.py" />
-      <option name="PARAMETERS" value="" />
-      <option name="SHOW_COMMAND_LINE" value="false" />
-      <option name="EMULATE_TERMINAL" value="false" />
-      <option name="MODULE_MODE" value="false" />
-      <option name="REDIRECT_INPUT" value="false" />
-      <option name="INPUT_FILE" value="" />
-      <method v="2" />
-    </configuration>
     <recent_temporary>
       <list>
         <item itemvalue="Python.main" />
+        <item itemvalue="Python.population-set" />
+        <item itemvalue="Python.layout-learn" />
         <item itemvalue="Python.trim-train-dataset (1)" />
         <item itemvalue="Python.make-test-dataset (1)" />
-        <item itemvalue="Python.join-date-time-cols" />
-        <item itemvalue="Python.trim-train-dataset" />
       </list>
     </recent_temporary>
   </component>
@@ -226,5 +228,10 @@
         </breakpoint>
       </default-breakpoints>
     </breakpoint-manager>
+    <watches-manager>
+      <configuration name="PythonConfigurationType">
+        <watch expression="model._n_features_in" />
+      </configuration>
+    </watches-manager>
   </component>
 </project>

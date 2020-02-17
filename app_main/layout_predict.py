@@ -1,9 +1,5 @@
-import dash
 import dash_core_components as dcc
 import dash_html_components as html
-
-# from app_main.main import app
-# from app_main.main import engine
 
 
 tab_predict_section = html.Div([
@@ -71,7 +67,14 @@ tab_predict_section = html.Div([
         html.Button(id='make-prediction',
                     children='Make prediction',
                     style={'fontSize': 18},
-                    disabled=False),
-        html.Div(id='prediction-result-div')
+                    n_clicks=0),
+        html.Div(id='prediction-result-div'),
+        html.A(id='download-results',
+               children=html.Button('Download prediction results',
+                        style={'fontSize': 15}),
+               download='prediction-results.csv',
+               href='',
+               target='_blank',
+               hidden=True)
     ])
 ])

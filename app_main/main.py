@@ -1,9 +1,6 @@
 import base64
 import io
-import datetime
-import sys
 import traceback
-import time
 import pickle
 import urllib.request
 
@@ -15,7 +12,6 @@ from dash.dependencies import Input, Output, State
 import dash_table
 import pandas as pd
 from flask_caching import Cache
-import numpy as np
 from app_main.engine import ForecasterEngine
 from app_main.layout_learn import tab_learn_section
 from app_main.layout_predict import tab_predict_section
@@ -104,7 +100,7 @@ def generate_and_evaluate_model(n_clicks, model_type, predicted_feature, nominal
     except Exception as e:
         # Show error message to proper div
         is_model_ready = False
-        results = generate_error_message(e)
+        results = generate_error_message(e, 'Error while generating model: ')
         model_info = html.H5('No model currently in use.')
     else:
         # model_cache_key = 'forecast_model_{}'.format(model_type)
@@ -112,7 +108,7 @@ def generate_and_evaluate_model(n_clicks, model_type, predicted_feature, nominal
         is_model_ready = True
         results = generate_model_results(eval_score, engine.timeseries_model.model_name, predicted_feature,
                                          len(train_set[0]), timer.time_elapsed)
-        model_info = generate_current_model_info(engine.timeseries_model.model_name, data_filename)
+        model_info = engine.get_model_info()
     finally:
         return results
 
@@ -131,9 +127,9 @@ def validate_input(predicted_feature, time_feature, n_steps_in, n_steps_out, n_t
         raise Exception('Please enter the number of training epochs.')
 
 
-def generate_error_message(exception):
+def generate_error_message(exception, title):
     return html.Div([
-        html.H5('Error while generating model: ' + str(exception)),
+        html.H5(title + str(exception)),
         html.Div(children=[
             html.P(line, style={'lineHeight': '90%'}) for line in traceback.format_exc().splitlines()],
             style={'fontSize': 16})],
@@ -216,10 +212,6 @@ def generate_model_results(eval_score, model_name, feature_name, train_set_size,
             html.H6('Mean absolute percentage error: {:.3f} %'.format(eval_score.mape))
         ]),
     ])
-
-
-def generate_current_model_info(model_type, data_filename):
-    return html.H5('Current model: {} used for {}'.format(model_type, data_filename))
 
 
 # Updates the data table Div on uploading a CSV file
@@ -354,42 +346,13 @@ def update_current_model_info(gen_res_div, upload_content):
         global is_model_ready
         if is_model_ready:
             model = engine.timeseries_model
-            return html.H4('(Internal) {} used for {} data set'.format(model.model_name, model.data_filename))
+            return html.H4('(Internal) {}'.format(engine.get_model_info()))
         else:
             return dash.no_update
     elif triggered['prop_id'] == 'upload-model.contents':
         return parse_uploaded_model(upload_content)
     else:
-        return html.H4(' ??')
-
-
-import tempfile
-import keras.models
-
-
-def make_keras_picklable():
-    def __getstate__(self):
-        model_str = ""
-        with tempfile.NamedTemporaryFile(delete=True) as fd:
-            fd.close()
-            keras.models.save_model(self, fd.name)
-            with open(fd.name, 'rb') as fd:
-                model_str = fd.read()
-                d = {'model_str': model_str}
-                return d
-
-    def __setstate__(self, state):
-        with tempfile.NamedTemporaryFile(delete=True) as fd:
-            fd.close()
-            with open(fd.name, 'wb') as fd:
-                fd.write(state['model_str'])
-                fd.flush()
-                model = keras.models.load_model(fd.name)
-                self.__dict__ = model.__dict__
-
-                cls = keras.models.Model
-                cls.__getstate__ = __getstate__
-                cls.__setstate__ = __setstate__
+        return dash.no_update
 
 
 def parse_uploaded_model(content):
@@ -399,16 +362,16 @@ def parse_uploaded_model(content):
         # Decode from 64-base string
         content_decoded = base64.b64decode(content_string)
         # model_string = io.StringIO(content_decoded.decode('utf-8'))
-        make_keras_picklable()
-        model = pickle.loads(content_decoded)
+        # model = pickle.loads(content_decoded)
+        engine.load_model_unpickle(content_decoded)
     except Exception as e:
         print(e)
         return html.Div([
             'There was an error processing the file: {}'.format(e)
         ], style={'fontSize': 16})
     else:
-        engine.load_model(model)
-        return html.H4('(Uploaded) {} used for {} data set'.format(model.model_name, model.data_filename))
+        # engine.load_model(model)
+        return html.H4('(Uploaded) {}'.format(engine.get_model_info()))
 
 
 # Updates the test data table Div on uploading a CSV file
@@ -464,6 +427,8 @@ def generate_test_data_table(content, filename, separator):
 @app.callback(Output('prediction-result-div', 'children'),
               [Input('make-prediction', 'n_clicks')])
 def make_prediction(n_clicks):
+    if n_clicks == 0:
+        return dash.no_update
     try:
         df_test = cache.get('test_df')
         if df_test is None:
@@ -471,30 +436,45 @@ def make_prediction(n_clicks):
         df_test = pickle.loads(df_test)
         y_predicted = engine.make_prediction(df_test)
     except Exception as e:
-        return [html.H5(str(e))]
+        return generate_error_message(e, 'Error while making prediction: ')
     else:
-        return generate_prediction_result(y_predicted, engine.timeseries_model.model_name,
-                                          engine.timeseries_model.predicted_feature)
+        return generate_prediction_result(y_predicted, engine.timeseries_model)
 
 
-def generate_prediction_result(y_dash, model_name, feature_name):
+def generate_prediction_result(y_dash, model):
     y_dash = y_dash.flatten()
+    time_attribute = model.get_datetime_array()
     return html.Div([
         html.H3('Prediction results'),
-        html.H6('Used model: {}'.format(model_name)),
-        html.H6('Predicted column name: {}'.format(feature_name)),
+        html.H6('Used model: {}'.format(model.model_name)),
+        html.H6('Predicted column name: {}'.format(model.predicted_feature)),
         dcc.Graph(figure={
             'data':
-                [go.Scatter(y=y_dash,
-                            mode='lines+markers',
-                            name='Predicted')],
-            'layout': go.Layout(title='{} - Prediction'.format(feature_name),
-                                xaxis={'title': 'Sample no.'},
-                                yaxis={'title': feature_name},
+                [go.Scatter(
+                    x=time_attribute,
+                    y=y_dash,
+                    mode='lines+markers',
+                    name='Predicted')],
+            'layout': go.Layout(title='{} - Prediction'.format(model.predicted_feature),
+                                xaxis={'title': 'Date/time'},
+                                yaxis={'title': model.predicted_feature},
                                 autosize=True,
                                 paper_bgcolor='#fee')
         })
     ])
+
+
+# @app.callback([Output('download-results', 'hidden'),
+#                Output('download-results', 'href')],
+#               Input('prediction-result-div', 'children'))
+# def update_download_results(children):
+#     pass
+#
+#
+# def generate_download_results_href():
+#     file_string = 'data:text/plain;charset=utf-8,' + urllib.request.quote(model_serial)
+#     return file_string
+
 
 
 if __name__ == '__main__':

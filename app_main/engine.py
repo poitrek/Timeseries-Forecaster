@@ -7,7 +7,8 @@ import numpy as np
 import pandas as pd
 import app_main.models as models
 import keras.backend as K
-from app_main.utils import Timer
+import pickle
+
 
 np.set_printoptions(precision=4)
 np.set_printoptions(edgeitems=8)
@@ -16,21 +17,53 @@ pd.set_option('display.width', 300)
 pd.set_option('display.max_columns', 9)
 
 
+def make_keras_picklable():
+    import tempfile
+    import keras.models
+
+    def __getstate__(self):
+        model_str = ""
+        with tempfile.NamedTemporaryFile(delete=True) as fd:
+            fd.close()
+            keras.models.save_model(self, fd.name)
+            with open(fd.name, 'rb') as fd:
+                model_str = fd.read()
+                d = {'model_str': model_str}
+                return d
+
+    def __setstate__(self, state):
+        with tempfile.NamedTemporaryFile(delete=True) as fd:
+            fd.close()
+            with open(fd.name, 'wb') as fd:
+                fd.write(state['model_str'])
+                fd.flush()
+                model = keras.models.load_model(fd.name)
+                self.__dict__ = model.__dict__
+
+                cls = keras.models.Model
+                cls.__getstate__ = __getstate__
+                cls.__setstate__ = __setstate__
+
+
 class ForecasterEngine:
 
     def __init__(self):
         self.timeseries_model = None
+        make_keras_picklable()
 
     def init_model(self, df, model_type, predicted_feature, nominal_features, datetime_feature, extra_datetime_features,
                    n_steps_in, n_steps_out, data_filename):
         # Parse to sets
         nominal_features = {} if nominal_features is None else set(nominal_features)
-        # datetime_features = {} if datetime_features is None else set(datetime_features)
+
         if extra_datetime_features is None:
             extra_datetime_features = []
 
         if predicted_feature in nominal_features:
             raise Exception('Predicted feature cannot be nominal. The model predicts only numerical features.')
+        if predicted_feature == datetime_feature:
+            raise Exception('The datetime feature cannot be predicted. Use one of the numerical features in the '
+                            'data set for prediction.')
 
         # Clear tensorflow session
         K.clear_session()
@@ -59,7 +92,7 @@ class ForecasterEngine:
             print(i, ':', X[i], '<--', y[i])
 
         # Compile the model
-        self.timeseries_model.compile_model()
+        self.timeseries_model.build_model()
 
         # Return processed input/output sequences
         return X, y
@@ -74,7 +107,7 @@ class ForecasterEngine:
         # Specify test size based on the size of full sequence
         # Minimum (30% of full sequence, 1000)
         test_size = 0.3 if len(dataset[0]) < 3333 else 1000
-        X_train, X_test, y_train, y_test = train_test_split(dataset[0], dataset[1], test_size=test_size)
+        X_train, X_test, y_train, y_test = train_test_split(dataset[0], dataset[1], test_size=test_size, shuffle=False)
         # If the target feature was scaled for training, rescale it now
         if self.timeseries_model._scale_predicted_feature:
             y_test = self.timeseries_model.rescale_target_feature(y_test)
@@ -95,6 +128,15 @@ class ForecasterEngine:
             raise Exception('No timeseries model in use to make a prediction!')
         X, _ = self.timeseries_model.prepare_data(df, mode='testing')
         return self.timeseries_model.predict(X)
+
+    # Loads model from pickled string
+    def load_model_unpickle(self, string):
+        # Use global tensorflow graph when unpickling keras model
+        with models.tf_graph.as_default():
+            self.timeseries_model = pickle.loads(string)
+
+    def get_model_info(self):
+        return self.timeseries_model.get_model_info()
 
 
 
