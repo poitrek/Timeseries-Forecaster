@@ -1,12 +1,13 @@
 import dash
 import dash_core_components as dcc
 import dash_html_components as html
+
 # from app_main.main import app
 # from app_main.main import engine
 
 
 tab_predict_section = html.Div([
-    html.H3('Prediction section'),
+    html.H3('Upload test data set'),
     html.Div([
         dcc.Upload(
             id='upload-data-test',
@@ -44,6 +45,13 @@ tab_predict_section = html.Div([
                    'left': '10px'})],
         style={'overflow': 'auto'}
     ),
+    html.Div(id='data-table-test',
+             style={
+                 'width': '84%',
+                 'paddinLeft': '20px',
+                 'paddingTop': '20px',
+             }),
+    html.Br(),
     html.Div([
         dcc.Upload(
             id='upload-model',
@@ -58,10 +66,11 @@ tab_predict_section = html.Div([
         html.H5('...or use lastly generated model.'),
         html.H4('Current model:'),
         html.Div(id='current-model-info',
-                 children=html.H5('No currently generated model.'))
+                 children=html.H5('No model currently in use.')),
+        html.Hr(),
+        html.Button(id='make-prediction',
+                    children='Make prediction',
+                    style={'fontSize': 18},
+                    disabled=False)
     ])
 ])
-
-
-
-

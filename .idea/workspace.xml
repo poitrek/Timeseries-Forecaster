@@ -2,10 +2,17 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="d23e0f86-2556-47b5-b4da-881edd19650f" name="Default Changelist" comment="">
+      <change afterPath="$PROJECT_DIR$/operations_on_datasets/check-file.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/operations_on_datasets/join-date-time-cols.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/operations_on_datasets/make-test-dataset.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/operations_on_datasets/trim-train-dataset.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app_main/engine.py" beforeDir="false" afterPath="$PROJECT_DIR$/app_main/engine.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/app_main/layout_predict.py" beforeDir="false" afterPath="$PROJECT_DIR$/app_main/layout_predict.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/app_main/main.py" beforeDir="false" afterPath="$PROJECT_DIR$/app_main/main.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/app_main/models.py" beforeDir="false" afterPath="$PROJECT_DIR$/app_main/models.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app_main/models2.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/single_test_programs/update-button.py" beforeDir="false" afterPath="$PROJECT_DIR$/single_test_programs/update-button.py" afterDir="false" />
     </list>
     <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
     <option name="SHOW_DIALOG" value="false" />
@@ -33,6 +40,9 @@
     <property name="settings.editor.selected.configurable" value="preferences.pluginManager" />
   </component>
   <component name="RecentsManager">
+    <key name="MoveFile.RECENT_KEYS">
+      <recent name="C:\Users\Piotr\PycharmProjects\TimeSeries-Forecaster\operations_on_datasets" />
+    </key>
     <key name="CopyFile.RECENT_KEYS">
       <recent name="C:\Users\Piotr\PycharmProjects\TimeSeries-Forecaster\app_main" />
       <recent name="C:\Users\Piotr\PycharmProjects\TimeSeries-Forecaster\version_two\app_main" />
@@ -52,8 +62,8 @@
       </list>
     </option>
   </component>
-  <component name="RunManager" selected="Python.main (1)">
-    <configuration name="loading-component" type="PythonConfigurationType" factoryName="Python" temporary="true">
+  <component name="RunManager" selected="Python.main">
+    <configuration name="join-date-time-cols" type="PythonConfigurationType" factoryName="Python" temporary="true">
       <module name="TimeSeries-Forecaster" />
       <option name="INTERPRETER_OPTIONS" value="" />
       <option name="PARENT_ENVS" value="true" />
@@ -61,11 +71,11 @@
         <env name="PYTHONUNBUFFERED" value="1" />
       </envs>
       <option name="SDK_HOME" value="" />
-      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/single_test_programs" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/operations_on_datasets" />
       <option name="IS_MODULE_SDK" value="true" />
       <option name="ADD_CONTENT_ROOTS" value="true" />
       <option name="ADD_SOURCE_ROOTS" value="true" />
-      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/single_test_programs/loading-component.py" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/operations_on_datasets/join-date-time-cols.py" />
       <option name="PARAMETERS" value="" />
       <option name="SHOW_COMMAND_LINE" value="false" />
       <option name="EMULATE_TERMINAL" value="false" />
@@ -74,7 +84,7 @@
       <option name="INPUT_FILE" value="" />
       <method v="2" />
     </configuration>
-    <configuration name="main (1)" type="PythonConfigurationType" factoryName="Python" temporary="true">
+    <configuration name="main" type="PythonConfigurationType" factoryName="Python" temporary="true">
       <module name="TimeSeries-Forecaster" />
       <option name="INTERPRETER_OPTIONS" value="" />
       <option name="PARENT_ENVS" value="true" />
@@ -95,7 +105,7 @@
       <option name="INPUT_FILE" value="" />
       <method v="2" />
     </configuration>
-    <configuration name="save-file-test" type="PythonConfigurationType" factoryName="Python" temporary="true">
+    <configuration name="make-test-dataset (1)" type="PythonConfigurationType" factoryName="Python" temporary="true">
       <module name="TimeSeries-Forecaster" />
       <option name="INTERPRETER_OPTIONS" value="" />
       <option name="PARENT_ENVS" value="true" />
@@ -103,11 +113,11 @@
         <env name="PYTHONUNBUFFERED" value="1" />
       </envs>
       <option name="SDK_HOME" value="" />
-      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/single_test_programs" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/operations_on_datasets" />
       <option name="IS_MODULE_SDK" value="true" />
       <option name="ADD_CONTENT_ROOTS" value="true" />
       <option name="ADD_SOURCE_ROOTS" value="true" />
-      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/single_test_programs/save-file-test.py" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/operations_on_datasets/make-test-dataset.py" />
       <option name="PARAMETERS" value="" />
       <option name="SHOW_COMMAND_LINE" value="false" />
       <option name="EMULATE_TERMINAL" value="false" />
@@ -116,7 +126,7 @@
       <option name="INPUT_FILE" value="" />
       <method v="2" />
     </configuration>
-    <configuration name="send-file-3" type="PythonConfigurationType" factoryName="Python" temporary="true">
+    <configuration name="trim-train-dataset (1)" type="PythonConfigurationType" factoryName="Python" temporary="true">
       <module name="TimeSeries-Forecaster" />
       <option name="INTERPRETER_OPTIONS" value="" />
       <option name="PARENT_ENVS" value="true" />
@@ -124,11 +134,11 @@
         <env name="PYTHONUNBUFFERED" value="1" />
       </envs>
       <option name="SDK_HOME" value="" />
-      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/single_test_programs" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/operations_on_datasets" />
       <option name="IS_MODULE_SDK" value="true" />
       <option name="ADD_CONTENT_ROOTS" value="true" />
       <option name="ADD_SOURCE_ROOTS" value="true" />
-      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/single_test_programs/send-file-3.py" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/operations_on_datasets/trim-train-dataset.py" />
       <option name="PARAMETERS" value="" />
       <option name="SHOW_COMMAND_LINE" value="false" />
       <option name="EMULATE_TERMINAL" value="false" />
@@ -137,7 +147,7 @@
       <option name="INPUT_FILE" value="" />
       <method v="2" />
     </configuration>
-    <configuration name="update-button" type="PythonConfigurationType" factoryName="Python" temporary="true">
+    <configuration name="trim-train-dataset" type="PythonConfigurationType" factoryName="Python" temporary="true">
       <module name="TimeSeries-Forecaster" />
       <option name="INTERPRETER_OPTIONS" value="" />
       <option name="PARENT_ENVS" value="true" />
@@ -149,7 +159,7 @@
       <option name="IS_MODULE_SDK" value="true" />
       <option name="ADD_CONTENT_ROOTS" value="true" />
       <option name="ADD_SOURCE_ROOTS" value="true" />
-      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/single_test_programs/update-button.py" />
+      <option name="SCRIPT_NAME" value="C:\Users\Piotr\PycharmProjects\TimeSeries-Forecaster\operations_on_datasets\trim-train-dataset.py" />
       <option name="PARAMETERS" value="" />
       <option name="SHOW_COMMAND_LINE" value="false" />
       <option name="EMULATE_TERMINAL" value="false" />
@@ -160,11 +170,11 @@
     </configuration>
     <recent_temporary>
       <list>
-        <item itemvalue="Python.main (1)" />
-        <item itemvalue="Python.update-button" />
-        <item itemvalue="Python.loading-component" />
-        <item itemvalue="Python.send-file-3" />
-        <item itemvalue="Python.save-file-test" />
+        <item itemvalue="Python.main" />
+        <item itemvalue="Python.trim-train-dataset (1)" />
+        <item itemvalue="Python.make-test-dataset (1)" />
+        <item itemvalue="Python.join-date-time-cols" />
+        <item itemvalue="Python.trim-train-dataset" />
       </list>
     </recent_temporary>
   </component>
@@ -214,6 +224,13 @@
           <option name="timeStamp" value="9" />
         </line-breakpoint>
       </breakpoints>
+      <default-breakpoints>
+        <breakpoint type="python-exception">
+          <properties notifyOnTerminate="true" exception="BaseException">
+            <option name="notifyOnTerminate" value="true" />
+          </properties>
+        </breakpoint>
+      </default-breakpoints>
     </breakpoint-manager>
   </component>
 </project>

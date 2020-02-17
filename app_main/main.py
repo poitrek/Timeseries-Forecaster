@@ -21,7 +21,6 @@ from app_main.layout_learn import tab_learn_section
 from app_main.layout_predict import tab_predict_section
 from app_main.utils import Timer
 
-
 external_stylesheets = ['https://codepen.io/chriddyp/pen/bWLwgP.css']
 
 app = dash.Dash(suppress_callback_exceptions=True,
@@ -106,7 +105,7 @@ def generate_and_evaluate_model(n_clicks, model_type, predicted_feature, nominal
         # Show error message to proper div
         is_model_ready = False
         results = generate_error_message(e)
-        model_info = html.H5('No currently generated model.')
+        model_info = html.H5('No model currently in use.')
     else:
         # model_cache_key = 'forecast_model_{}'.format(model_type)
         # cache.set(model_cache_key, pickle.dumps(model))
@@ -227,19 +226,18 @@ def generate_current_model_info(model_type, data_filename):
 @app.callback(Output('data-table', 'children'),
               [Input('upload-data', 'contents')],
               [State('upload-data', 'filename'),
-               State('upload-data', 'last_modified'),
                State('upload-sep', 'value')])
-def upload_data_set(content, filename, filedate, file_separator):
+def upload_data_set(content, filename, file_separator):
     print('Upload_data_set()')
     if content is not None:
-        children = [
-            generate_data_table(content, filename, filedate, file_separator)
-        ]
-        return children
+        data_table_div, df = generate_data_table(content, filename, file_separator)
+        # Cache data frame
+        cache.set('current_df', pickle.dumps(df))
+        return data_table_div
 
 
 # Parses contents from loaded file
-def generate_data_table(content, filename, date, separator):
+def generate_data_table(content, filename, separator):
     # Split contents into type and the string
     content_type, content_string = content.split(',')
 
@@ -256,11 +254,9 @@ def generate_data_table(content, filename, date, separator):
         return html.Div([
             'There was an error processing this file.'
         ], style={'fontSize': 16})
-    # Cache data frame
-    cache.set('current_df', pickle.dumps(df))
 
     rows_limit = 7
-    return html.Div([
+    data_table_div = html.Div([
         html.H5('Loaded dataset: \'{}\''.format(filename),
                 style={'float': 'left'}),
         html.H6('{} rows x {} columns'.format(len(df), len(df.columns)),
@@ -274,6 +270,7 @@ def generate_data_table(content, filename, date, separator):
         ),
     ],
         style={'marginTop': '10px'})
+    return data_table_div, df
 
 
 # Enables/disables button whether data table is loaded or not
@@ -344,31 +341,160 @@ def generate_export_href():
     return file_string
 
 
-# ============= Callbacks for 'Prediction' module =============
+# ======================= Callbacks for 'Prediction' module =======================
+
 
 @app.callback(Output('current-model-info', 'children'),
               [Input('model-gen-result-div', 'children'),
                Input('upload-model', 'contents')])
-def update_current_model_info(gen_res_div, upload_model):
+def update_current_model_info(gen_res_div, upload_content):
+    triggered = dash.callback_context.triggered[0]
+    print('triggered.prop_id:', triggered['prop_id'])
+    if triggered['prop_id'] == 'model-gen-result-div.children':
+        global is_model_ready
+        if is_model_ready:
+            model = engine.timeseries_model
+            return html.H4('(Internal) {} used for {} data set'.format(model.model_name, model.data_filename))
+        else:
+            return dash.no_update
+    elif triggered['prop_id'] == 'upload-model.contents':
+        return parse_uploaded_model(upload_content)
+    else:
+        return html.H4(' ??')
 
+
+import tempfile
+import keras.models
+
+
+def make_keras_picklable():
+    def __getstate__(self):
+        model_str = ""
+        with tempfile.NamedTemporaryFile(delete=True) as fd:
+            fd.close()
+            keras.models.save_model(self, fd.name)
+            with open(fd.name, 'rb') as fd:
+                model_str = fd.read()
+                d = {'model_str': model_str}
+                return d
+
+    def __setstate__(self, state):
+        with tempfile.NamedTemporaryFile(delete=True) as fd:
+            fd.close()
+            with open(fd.name, 'wb') as fd:
+                fd.write(state['model_str'])
+                fd.flush()
+                model = keras.models.load_model(fd.name)
+                self.__dict__ = model.__dict__
+
+                cls = keras.models.Model
+                cls.__getstate__ = __getstate__
+                cls.__setstate__ = __setstate__
 
 
 def parse_uploaded_model(content):
-    # Split contents into type and the string
-    content_type, content_string = content.split(',')
-
-    # Decode from 64-base string
-    content_decoded = base64.b64decode(content_string)
     try:
-        model_string = io.StringIO(content_decoded.decode('utf-8'))
-        model = pickle.loads(model_string)
+        # Split contents into type and the string
+        content_type, content_string = content.split(',')
+        # Decode from 64-base string
+        content_decoded = base64.b64decode(content_string)
+        # model_string = io.StringIO(content_decoded.decode('utf-8'))
+        make_keras_picklable()
+        model = pickle.loads(content_decoded)
     except Exception as e:
         print(e)
         return html.Div([
-            'There was an error processing this file: {}'.format(e)
+            'There was an error processing the file: {}'.format(e)
         ], style={'fontSize': 16})
     else:
-        pass
+        engine.load_model(model)
+        return html.H4('(Uploaded) {} used for {} data set'.format(model.model_name, model.data_filename))
+
+
+# Updates the test data table Div on uploading a CSV file
+@app.callback(Output('data-table-test', 'children'),
+              [Input('upload-data-test', 'contents')],
+              [State('upload-data-test', 'filename'),
+               State('upload-test-sep', 'value')])
+def upload_test_data_set(content, filename, file_separator):
+    print('Upload_data_set()')
+    if content is not None:
+        data_table_div, df = generate_test_data_table(content, filename, file_separator)
+        # Cache data frame
+        cache.set('test_df', pickle.dumps(df))
+        return data_table_div
+
+
+# Parses contents from loaded file
+def generate_test_data_table(content, filename, separator):
+    # Split contents into type and the string
+    content_type, content_string = content.split(',')
+    # Decode from 64-base string
+    content_decoded = base64.b64decode(content_string)
+    try:
+        if 'csv' in filename:
+            # Assume that the user uploaded a CSV file
+            df = pd.read_csv(
+                io.StringIO(content_decoded.decode('utf-8')), sep=separator,
+                low_memory=False)
+    except Exception as e:
+        print(e)
+        return html.Div([
+            'There was an error processing this file.'
+        ], style={'fontSize': 16})
+
+    rows_limit = 5
+    data_table_div = html.Div([
+        html.H5('Testing data set: \'{}\''.format(filename),
+                style={'float': 'left'}),
+        html.H6('{} rows x {} columns'.format(len(df), len(df.columns)),
+                style={'float': 'right',
+                       'marginRight': '10px'}),
+        # Make a data table from the data frame
+        dash_table.DataTable(
+            data=df.head(rows_limit).to_dict('records'),
+            columns=[{'name': i, 'id': i} for i in df.columns],
+            style_table={'width': '100%', 'overflow': 'scroll'}
+        ),
+    ],
+        style={'marginTop': '10px'})
+    return data_table_div, df
+
+
+@app.callback(Output('prediction-result-div', 'children'),
+              [Input('make-prediction', 'n_clicks')])
+def make_prediction(n_clicks):
+    try:
+        df_test = cache.get('test_df')
+        if df_test is None:
+            raise Exception('No test data set loaded for prediction!')
+        df_test = pickle.loads(df_test)
+        y_predicted = engine.make_prediction(df_test)
+    except Exception as e:
+        return html.h5(e)
+    else:
+        return generate_prediction_result(y_predicted, engine.timeseries_model.model_name,
+                                          engine.timeseries_model.predicted_feature)
+
+
+def generate_prediction_result(y_dash, model_name, feature_name):
+    y_dash = y_dash.flatten()
+    return html.Div([
+        html.H3('Prediction results'),
+        html.H6('Used model: {}'.format(model_name)),
+        html.H6('Predicted column name: {}'.format(feature_name)),
+        dcc.Graph(figure={
+            'data':
+                [go.Scatter(y=y_dash,
+                            mode='lines+markers',
+                            name='Predicted')],
+            'layout': go.Layout(title='{} - Prediction'.format(feature_name),
+                                xaxis={'title': 'Sample no.'},
+                                yaxis={'title': feature_name},
+                                autosize=True,
+                                paper_bgcolor='#fee')
+        })
+    ])
 
 
 if __name__ == '__main__':

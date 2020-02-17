@@ -19,12 +19,7 @@ pd.set_option('display.max_columns', 9)
 class ForecasterEngine:
 
     def __init__(self):
-        # self.df = None
         self.timeseries_model = None
-        # self._pred_feature = None
-        # self._pred_feature_scaler = None
-        # self._pred_feature_ori = None
-        # self._model_gen_time = None
 
     def init_model(self, df, model_type, predicted_feature, nominal_features, datetime_feature, extra_datetime_features,
                    n_steps_in, n_steps_out, data_filename):
@@ -41,7 +36,6 @@ class ForecasterEngine:
         K.clear_session()
 
         # Choose the model type
-
         if model_type == 'MLP':
             self.timeseries_model = models.TimeseriesMLPModel(predicted_feature, nominal_features, datetime_feature,
                                                               extra_datetime_features, n_steps_in, n_steps_out,
@@ -59,20 +53,21 @@ class ForecasterEngine:
                             'Got model type: \'{}\''.format(model_type))
 
         # Prepare data for training
-
         X, y = self.timeseries_model.prepare_data(df, mode='training')
-
         print('Model inputs/outputs:')
         for i in range(10):
             print(i, ':', X[i], '<--', y[i])
 
         # Compile the model
-
         self.timeseries_model.compile_model()
 
         # Return processed input/output sequences
-
         return X, y
+
+    # Loads ready model
+    def load_model(self, new_model):
+        K.clear_session()
+        self.timeseries_model = new_model
 
     # @staticmethod
     def split_train_test(self, dataset):
@@ -95,6 +90,12 @@ class ForecasterEngine:
         evaluator.predict_evaluate(test_set[1], y_dash)
         return evaluator
 
+    def make_prediction(self, df):
+        if self.timeseries_model is None:
+            raise Exception('No timeseries model in use to make a prediction!')
+        X, _ = self.timeseries_model.prepare_data(df, mode='testing')
+        return self.timeseries_model.predict(X)
+
 
 
     ''' Generates a Deep Learning model for forecasting based on given data frame and options
@@ -113,50 +114,6 @@ class ForecasterEngine:
 
     ''' Returns a new dataframe of time-related features extracted from the datetime column
     (year, quarter, month, day of month, day of week, hour, minute, second'''
-
-
-    def predict_evaluate(self, ts_model, X_test, y_test):
-        # Inverse scaling
-        # y_test = self._pred_feature_scaler.inverse_transform(y_test)
-        y_dash = ts_model.predict(X_test)
-        # y_dash = self._pred_feature_scaler.inverse_transform(y_dash)
-        print('\nPrediction / actual results:')
-        for i in range(50):
-            print(i + 1, '. ', y_dash[i], ' - ', y_test[i], sep='')
-        print('...')
-        # accuracy = ts_model.evaluate(X_test, y_test)
-        # print('Evaluated model accuracy: (mae)', accuracy)
-
-        print('\nEvaluation metrics:')
-        # Mean Absolute Error
-        mae = mean_absolute_error(y_test, y_dash)
-        print('Mean absolute error: %.3f' % mae)
-        # Root Mean Squared Error
-        rmse = np.sqrt(mean_squared_error(y_test, y_dash))
-        print('Root mean squared error: %.3f' % rmse)
-        # R^2 Score
-        r2_sc = r2_score(y_test, y_dash)
-        print('R2 Score: %.4f' % r2_sc)
-        # Mean Absolute Percentage Error
-        # This was incorrect
-        # mape = 100 * np.mean(np.abs(1 - y_test/y_dash))
-        mape = 100 * np.mean(np.abs(1 - y_dash / y_test))
-        print('Mean absolute percentage error: %.3f' % mape, '%', sep='')
-        # print('ACTUAL MAPE: %.4f' % mape_true, ' %', sep='')
-        # Root Mean Square Percentage Error
-        rmspe = np.sqrt(np.mean((1 - y_dash / y_test) ** 2))
-        print('Root mean square percentage error: %.5f' % rmspe)
-
-        tests_scores = np.stack(
-            (np.arange(len(y_test)), y_dash.flatten(), y_test.flatten(), np.abs(y_test - y_dash).flatten()), axis=-1)
-        tests_scores = tests_scores[tests_scores[:, 3].argsort()]
-        print('\nTop 5 predictions:')
-        # for i in range(5):
-        #     print(tests_scores[i, 0], '. ', tests_scores[i, 1], ' - ', tests_scores[i, 2], sep='')
-        for ts in tests_scores[:5]:
-            print(int(ts[0]), '. %.3f' % ts[1], ' - ', ts[2], ' (error=%.3f)' % ts[3], sep='')
-
-        return y_dash, mae, rmse, r2_sc, mape
 
 
 class ModelEvaluator:

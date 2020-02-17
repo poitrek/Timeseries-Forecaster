@@ -29,7 +29,7 @@ class TimeseriesModel:
         
     def __init__(self, predicted_feature, nominal_features, datetime_feature, extra_datetime_features,
                  n_steps_in, n_steps_out, data_filename, scale_predicted_feature=True):
-        self._predicted_feature = predicted_feature
+        self.predicted_feature = predicted_feature
         self._nominal_features = nominal_features
         self._datetime_feature = datetime_feature
         self._extra_datetime_features = extra_datetime_features
@@ -104,7 +104,7 @@ class TimeseriesModel:
         # Set of numerical features
         numerical_features = all_features.difference(self._nominal_features, {self._datetime_feature})
 
-        if self._predicted_feature not in numerical_features:
+        if self.predicted_feature not in numerical_features:
             raise Exception('Predicted feature not found among numerical features. Please choose the feature you'
                             ' want to predict from existing numerical columns.')
 
@@ -132,7 +132,7 @@ class TimeseriesModel:
             # Normalize
             feature_sc = scaler.fit_transform(feature)
             processed_features.append(feature_sc)
-            if feature_name == self._predicted_feature:
+            if feature_name == self.predicted_feature:
                 # Remember the predicted feature and its scale
                 self._pred_feature_scaler = copy.deepcopy(scaler)
                 target_feature_scaled = feature_sc
