@@ -14,6 +14,7 @@ from keras.layers import Input
 from keras.layers.merge import concatenate
 from keras.models import Model
 from keras.layers import LSTM
+import keras.regularizers
 from numpy import array
 from numpy import hstack
 import pandas as pd
@@ -269,11 +270,14 @@ class TimeseriesMLPModel(TimeseriesModel):
     def compile_model(self):
 
         self._keras_model = Sequential(name=self.model_name)
-        self._keras_model.add(Dense(64, input_dim=self._n_inputs, activation='relu'))
-        self._keras_model.add(Dense(32, activation='relu'))
-        self._keras_model.add(Dense(16, activation='relu'))
+        self._keras_model.add(Dense(64, input_dim=self._n_inputs, activation='relu',
+                                    kernel_regularizer=keras.regularizers.l1(0.01)))
+        self._keras_model.add(Dense(32, activation='relu',
+                                    kernel_regularizer=keras.regularizers.l1(0.01)))
+        self._keras_model.add(Dense(16, activation='relu',
+                                    kernel_regularizer=keras.regularizers.l1(0.01)))
         # self._keras_model.add(Dense(16, activation='relu'))
-        self._keras_model.add(Dense(self._n_outputs, activation='relu'))
+        self._keras_model.add(Dense(self._n_outputs, activation='linear'))
         self._keras_model.compile(optimizer=Adadelta(), loss='mae')
         print(self._keras_model.summary())
         print('Input nodes:', self._n_inputs)
@@ -329,7 +333,7 @@ class TimeseriesCNNModel(TimeseriesModel):
         self._keras_model.add(MaxPooling1D())
         self._keras_model.add(Flatten())
         self._keras_model.add(Dense(units=32, activation='relu'))
-        self._keras_model.add(Dense(units=16, activation='relu'))
+        self._keras_model.add(Dense(units=16, activation='linear'))
         self._keras_model.add(Dense(units=self._n_outputs))
         self._keras_model.compile(optimizer=Adadelta(), loss='mae')
         print(self._keras_model.summary())
@@ -381,7 +385,7 @@ class TimeseriesLSTMModel(TimeseriesModel):
         self._keras_model.add(LSTM(units=24, activation='relu', input_shape=(self._n_steps_in, self._n_features_in),
                              return_sequences=True))
         self._keras_model.add(LSTM(units=24, activation='relu', return_sequences=True))
-        self._keras_model.add(LSTM(units=24, activation='relu'))
+        self._keras_model.add(LSTM(units=24, activation='linear'))
         # self._keras_model.add(Dense(units=24, activation='relu'))
         self._keras_model.add(Dense(units=self._n_outputs))
         self._keras_model.compile(optimizer=Adam(lr=0.002), loss='mae')

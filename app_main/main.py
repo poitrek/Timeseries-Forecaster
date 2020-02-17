@@ -69,8 +69,7 @@ def update_div_once(children):
     return dash.no_update
 
 
-@app.callback([Output('model-gen-result-div', 'children'),
-               Output('current-model-info', 'children')],
+@app.callback(Output('model-gen-result-div', 'children'),
               [Input('gen-model-button', 'n_clicks')],
               [State('model-choice', 'value'),
                State('select-predicted-feature', 'value'),
@@ -116,7 +115,7 @@ def generate_and_evaluate_model(n_clicks, model_type, predicted_feature, nominal
                                          len(train_set[0]), timer.time_elapsed)
         model_info = generate_current_model_info(engine.timeseries_model.model_name, data_filename)
     finally:
-        return results, model_info
+        return results
 
 
 # Checks if the input for model generation is correct. Raises exception if any of the arguments is missing
@@ -143,19 +142,22 @@ def generate_error_message(exception):
 
 
 def generate_model_results(eval_score, model_name, feature_name, train_set_size, generation_time):
-    eval_score.y_dash = eval_score.y_dash.flatten()
-    eval_score.y_test = eval_score.y_test.flatten()
+    y_dash = eval_score.y_dash.flatten()
+    y_test = eval_score.y_test.flatten()
+    test_shape = eval_score.y_test.shape
     min_value = min(eval_score.y_test.min(), eval_score.y_dash.min())
     max_value = max(eval_score.y_test.max(), eval_score.y_dash.max())
+    # Number of test samples to show on the first plot
+    samples_to_show = min(300, len(eval_score.y_test))
     return html.Div([
         html.H3('Model generation results'),
         html.Div([
             dcc.Graph(figure={
                 'data':
-                    [go.Scatter(y=eval_score.y_test,
+                    [go.Scatter(y=y_test[:samples_to_show],
                                 mode='markers',
                                 name='Real'),
-                     go.Scatter(y=eval_score.y_dash,
+                     go.Scatter(y=y_dash[:samples_to_show],
                                 mode='markers',
                                 name='Predicted')],
                 'layout': go.Layout(title='{} - Real vs Predicted'.format(feature_name),
@@ -177,13 +179,16 @@ def generate_model_results(eval_score, model_name, feature_name, train_set_size,
         html.Div([
             dcc.Graph(figure={
                 'data': [
-                    go.Scatter(x=eval_score.y_test,
-                               y=eval_score.y_dash,
-                               mode='markers'),
+                    go.Scatter(x=y_test,
+                               y=y_dash,
+                               mode='markers',
+                               name='',
+                               showlegend=False),
                     go.Scatter(x=[min_value, max_value],
                                y=[min_value, max_value],
                                mode='lines',
-                               name='y = x')
+                               name='y = x',
+                               showlegend=True)
                 ],
                 'layout': go.Layout(title='Q-Q plot',
                                     xaxis={'title': 'Real'},
@@ -204,7 +209,8 @@ def generate_model_results(eval_score, model_name, feature_name, train_set_size,
             html.H6('Used forecasting model: {}'.format(model_name)),
             html.H6('Generation time: {:.2f} s'.format(generation_time)),
             html.H6('Training set size: {:d}'.format(train_set_size)),
-            html.H6('Tested samples: {}'.format(len(eval_score.y_test))),
+            html.H6('Tested samples: {:d} x {:d} step{}'.format(test_shape[0], test_shape[1],
+                                                                's' if test_shape[1] > 1 else '')),
             html.H6('Mean absolute error: {:.3f}'.format(eval_score.mae)),
             html.H6('Root mean squared error: {:.3f}'.format(eval_score.rmse)),
             html.H6('R2 Score: {:.3f}'.format(eval_score.r2_score)),
@@ -227,13 +233,13 @@ def upload_data_set(content, filename, filedate, file_separator):
     print('Upload_data_set()')
     if content is not None:
         children = [
-            parse_file_contents(content, filename, filedate, file_separator)
+            generate_data_table(content, filename, filedate, file_separator)
         ]
         return children
 
 
 # Parses contents from loaded file
-def parse_file_contents(content, filename, date, separator):
+def generate_data_table(content, filename, date, separator):
     # Split contents into type and the string
     content_type, content_string = content.split(',')
 
@@ -255,14 +261,17 @@ def parse_file_contents(content, filename, date, separator):
 
     rows_limit = 7
     return html.Div([
-        html.H5('Loaded dataset: \'{}\''.format(filename)),
-        # html.H5(datetime.datetime.fromtimestamp(date)),
+        html.H5('Loaded dataset: \'{}\''.format(filename),
+                style={'float': 'left'}),
+        html.H6('{} rows x {} columns'.format(len(df), len(df.columns)),
+                style={'float': 'right',
+                       'marginRight': '10px'}),
         # Make a data table from the data frame
         dash_table.DataTable(
             data=df.head(rows_limit).to_dict('records'),
             columns=[{'name': i, 'id': i} for i in df.columns],
             style_table={'width': '100%', 'overflow': 'scroll'}
-        )
+        ),
     ],
         style={'marginTop': '10px'})
 
@@ -333,6 +342,33 @@ def generate_export_href():
     model_serial = pickle.dumps(engine.timeseries_model)
     file_string = 'data:text/plain;charset=utf-8,' + urllib.request.quote(model_serial)
     return file_string
+
+
+# ============= Callbacks for 'Prediction' module =============
+
+@app.callback(Output('current-model-info', 'children'),
+              [Input('model-gen-result-div', 'children'),
+               Input('upload-model', 'contents')])
+def update_current_model_info(gen_res_div, upload_model):
+
+
+
+def parse_uploaded_model(content):
+    # Split contents into type and the string
+    content_type, content_string = content.split(',')
+
+    # Decode from 64-base string
+    content_decoded = base64.b64decode(content_string)
+    try:
+        model_string = io.StringIO(content_decoded.decode('utf-8'))
+        model = pickle.loads(model_string)
+    except Exception as e:
+        print(e)
+        return html.Div([
+            'There was an error processing this file: {}'.format(e)
+        ], style={'fontSize': 16})
+    else:
+        pass
 
 
 if __name__ == '__main__':

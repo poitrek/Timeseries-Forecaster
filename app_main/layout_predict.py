@@ -55,7 +55,8 @@ tab_predict_section = html.Div([
                             )
             ]
         ),
-        html.H4('...or use lastly generated model.'),
+        html.H5('...or use lastly generated model.'),
+        html.H4('Current model:'),
         html.Div(id='current-model-info',
                  children=html.H5('No currently generated model.'))
     ])
