@@ -104,9 +104,9 @@ class TimeseriesModel:
         # Set of numerical features
         numerical_features = all_features.difference(self._nominal_features, {self._datetime_feature})
 
-        if self.predicted_feature not in numerical_features:
-            raise Exception('Predicted feature not found among numerical features. Please choose the feature you'
-                            ' want to predict from existing numerical columns.')
+        # if self.predicted_feature not in numerical_features:
+        #     raise Exception('Predicted feature not found among numerical features. Please choose the feature you'
+        #                     ' want to predict from existing numerical columns.')
 
         processed_features = []
         target_feature = None

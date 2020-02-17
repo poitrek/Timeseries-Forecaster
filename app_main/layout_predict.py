@@ -71,6 +71,7 @@ tab_predict_section = html.Div([
         html.Button(id='make-prediction',
                     children='Make prediction',
                     style={'fontSize': 18},
-                    disabled=False)
+                    disabled=False),
+        html.Div(id='prediction-result-div')
     ])
 ])

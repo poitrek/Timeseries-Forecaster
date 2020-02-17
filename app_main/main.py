@@ -471,7 +471,7 @@ def make_prediction(n_clicks):
         df_test = pickle.loads(df_test)
         y_predicted = engine.make_prediction(df_test)
     except Exception as e:
-        return html.h5(e)
+        return [html.H5(str(e))]
     else:
         return generate_prediction_result(y_predicted, engine.timeseries_model.model_name,
                                           engine.timeseries_model.predicted_feature)
