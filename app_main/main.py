@@ -11,6 +11,7 @@ import dash_html_components as html
 from dash.dependencies import Input, Output, State
 import dash_table
 import pandas as pd
+import numpy as np
 from flask_caching import Cache
 from app_main.engine import ForecasterEngine
 from app_main.layout_learn import tab_learn_section
@@ -137,24 +138,33 @@ def generate_error_message(exception, title):
 
 
 def generate_model_results(eval_score, model_name, feature_name, train_set_size, generation_time):
-    y_dash = eval_score.y_dash.flatten()
-    y_test = eval_score.y_test.flatten()
+    y_dash = eval_score.y_dash
+    y_test = eval_score.y_test
     test_shape = eval_score.y_test.shape
     min_value = min(eval_score.y_test.min(), eval_score.y_dash.min())
     max_value = max(eval_score.y_test.max(), eval_score.y_dash.max())
     # Number of test samples to show on the first plot
     samples_to_show = min(300, len(eval_score.y_test))
+    plot_data = [go.Scatter(
+        x=np.arange(samples_to_show),
+        y=y_test[:samples_to_show, 0],
+        mode='lines+markers',
+        name='Real')]
+    for i in range(y_dash.shape[1]):
+        plot_data.append(go.Scatter(
+            x=np.arange(samples_to_show) + i,
+            y=y_dash[:samples_to_show, i],
+            mode='lines+markers',
+            opacity=0.8,
+            name='Pred. step [t+{}]'.format(i),
+            visible=True if i == 0 else 'legendonly'
+        ))
+
     return html.Div([
         html.H3('Model generation results'),
         html.Div([
             dcc.Graph(figure={
-                'data':
-                    [go.Scatter(y=y_test[:samples_to_show],
-                                mode='markers',
-                                name='Real'),
-                     go.Scatter(y=y_dash[:samples_to_show],
-                                mode='markers',
-                                name='Predicted')],
+                'data': plot_data,
                 'layout': go.Layout(title='{} - Real vs Predicted'.format(feature_name),
                                     xaxis={'title': 'Sample no.'},
                                     yaxis={'title': feature_name},
@@ -174,8 +184,8 @@ def generate_model_results(eval_score, model_name, feature_name, train_set_size,
         html.Div([
             dcc.Graph(figure={
                 'data': [
-                    go.Scatter(x=y_test,
-                               y=y_dash,
+                    go.Scatter(x=y_test.flatten(),
+                               y=y_dash.flatten(),
                                mode='markers',
                                name='',
                                showlegend=False),
