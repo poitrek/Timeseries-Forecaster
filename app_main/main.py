@@ -452,19 +452,39 @@ def make_prediction(n_clicks):
 
 
 def generate_prediction_result(y_dash, model):
-    y_dash = y_dash.flatten()
     time_attribute = model.get_datetime_array()
+    # Limit samples to show
+    samples_limit = 600
+    n_samples = y_dash.shape[0]
+    if n_samples > samples_limit:
+        y_dash = y_dash[:samples_limit, :]
+        time_attribute = time_attribute[:samples_limit]
+    n_steps_out = y_dash.shape[1]
+    # Extend time attribute by several new timestamps
+    time_delta = time_attribute[1] - time_attribute[0]
+    extra_time = [time_attribute.iloc[-1] + time_delta]
+    for i in range(n_steps_out - 1):
+        extra_time.append(extra_time[-1] + time_delta)
+    time_attribute = time_attribute.append(pd.Series(extra_time), ignore_index=True)
+    print('time_attribute:')
+    print(time_attribute)
     return html.Div([
         html.H3('Prediction results'),
         html.H6('Used model: {}'.format(model.model_name)),
         html.H6('Predicted column name: {}'.format(model.predicted_feature)),
+        html.H6('Number of samples: {}'.format(n_samples)),
+        html.H6('Number of steps predicting: {}'.format(n_steps_out)),
         dcc.Graph(figure={
             'data':
+                # Define trace for every output step
                 [go.Scatter(
-                    x=time_attribute,
-                    y=y_dash,
+                    x=time_attribute[i: i-n_steps_out],
+                    y=y_dash[:, i],
                     mode='lines+markers',
-                    name='Predicted')],
+                    name='step {}'.format(i),
+                    visible=True if i==0 else 'legendonly',
+                    showlegend=True)
+                    for i in range(n_steps_out)],
             'layout': go.Layout(title='{} - Prediction'.format(model.predicted_feature),
                                 xaxis={'title': 'Date/time'},
                                 yaxis={'title': model.predicted_feature},
