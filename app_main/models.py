@@ -43,6 +43,7 @@ class TimeseriesModel:
         self._scale_predicted_feature = scale_predicted_feature
         self._pred_feature_on_input = pred_feature_on_input
         self._datetime_array = None
+        self._differentiate_predicted_feature = False
         # Initialize own session and graph for the keras model
         # self.__session = tf.Session()
         # self.__graph = tf.get_default_graph()
@@ -108,7 +109,7 @@ class TimeseriesModel:
     def _preprocess(self, df, df_extra_datetime, mode):
 
         # Sort dataframe by the time-related column
-        df = df.sort_values(by=[self._datetime_feature])
+        # df = df.sort_values(by=[self._datetime_feature])
 
         # Set of all features
         all_features = set(df.columns)
@@ -190,6 +191,12 @@ class TimeseriesModel:
         if mode == 'training':
             # Preprocess the target feature
             target_feature = array(df[self.predicted_feature])
+
+            # Make time series stationary - differentiate elements
+            if self._differentiate_predicted_feature:
+                target_shifted = np.roll(target_feature, 1)
+                target_feature = target_feature - target_shifted
+
             target_feature = target_feature.reshape((target_feature.shape[0], 1))
             if pd.isna(target_feature).any():
                 target_feature = imputer_median.fit_transform(target_feature)

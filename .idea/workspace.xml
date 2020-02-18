@@ -2,8 +2,9 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="d23e0f86-2556-47b5-b4da-881edd19650f" name="Default Changelist" comment="">
+      <change afterPath="$PROJECT_DIR$/operations_on_datasets/rossmann-prepare.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app_main/main.py" beforeDir="false" afterPath="$PROJECT_DIR$/app_main/main.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app_main/models.py" beforeDir="false" afterPath="$PROJECT_DIR$/app_main/models.py" afterDir="false" />
     </list>
     <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
     <option name="SHOW_DIALOG" value="false" />
@@ -14,8 +15,8 @@
   <component name="FileTemplateManagerImpl">
     <option name="RECENT_TEMPLATES">
       <list>
-        <option value="Python Script" />
         <option value="Dash Plotly app" />
+        <option value="Python Script" />
       </list>
     </option>
   </component>
@@ -138,7 +139,7 @@
       <option name="INPUT_FILE" value="" />
       <method v="2" />
     </configuration>
-    <configuration name="trim-train-dataset (1)" type="PythonConfigurationType" factoryName="Python" temporary="true">
+    <configuration name="rossmann-prepare" type="PythonConfigurationType" factoryName="Python" temporary="true">
       <module name="TimeSeries-Forecaster" />
       <option name="INTERPRETER_OPTIONS" value="" />
       <option name="PARENT_ENVS" value="true" />
@@ -150,7 +151,7 @@
       <option name="IS_MODULE_SDK" value="true" />
       <option name="ADD_CONTENT_ROOTS" value="true" />
       <option name="ADD_SOURCE_ROOTS" value="true" />
-      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/operations_on_datasets/trim-train-dataset.py" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/operations_on_datasets/rossmann-prepare.py" />
       <option name="PARAMETERS" value="" />
       <option name="SHOW_COMMAND_LINE" value="false" />
       <option name="EMULATE_TERMINAL" value="false" />
@@ -162,10 +163,10 @@
     <recent_temporary>
       <list>
         <item itemvalue="Python.main" />
+        <item itemvalue="Python.rossmann-prepare" />
         <item itemvalue="Python.plot-many-traces" />
         <item itemvalue="Python.population-set" />
         <item itemvalue="Python.layout-learn" />
-        <item itemvalue="Python.trim-train-dataset (1)" />
       </list>
     </recent_temporary>
   </component>
