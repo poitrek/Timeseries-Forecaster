@@ -6,13 +6,9 @@ from keras.models import Sequential
 from keras.layers import Dense
 from keras.optimizers import Adam
 from keras.optimizers import Adadelta
-from keras.optimizers import Nadam
 from keras.layers import Conv1D
 from keras.layers import MaxPooling1D
 from keras.layers import Flatten
-from keras.layers import Input
-from keras.layers.merge import concatenate
-from keras.models import Model
 from keras.layers import LSTM
 import keras.regularizers
 from numpy import array
@@ -22,8 +18,6 @@ import numpy as np
 import copy
 import sklearn.model_selection as sk_ms
 import tensorflow as tf
-# import keras.backend.tensorflow_backend as tb
-# tb._SYMBOLIC_SCOPE.value = True
 tf_graph = tf.get_default_graph()
 
 
@@ -48,14 +42,11 @@ class TimeseriesModel:
         # self.__session = tf.Session()
         # self.__graph = tf.get_default_graph()
 
-
     def get_model_info(self):
         return '{} used for \'{}\' data set'.format(self.model_name, self.data_filename)
 
-    # def __init__(self):
-    #     self._keras_model = None
-    #     self._n_epochs_used = None
-    
+    ''' Prepares data from a data frame for training/testing'''
+
     def prepare_data(self, df, mode):
         df_extra_datetime = self._extract_datetime_features(df)
         if mode == 'training':
@@ -130,10 +121,8 @@ class TimeseriesModel:
         # Choose a scaler to normalize/standardize numeric data
         # scaler = MinMaxScaler(feature_range=(0, 1))
         scaler = StandardScaler()
-        # scaler = PowerTransformer()
-
-        imputer_median = SimpleImputer(missing_values=np.nan, strategy='median', verbose=1)
-
+        imputer_median = SimpleImputer(missing_values=np.nan,
+                                       strategy='median')
         # For every numerical feature
         for feature_name in numerical_features:
             # Convert to numpy array
@@ -141,7 +130,6 @@ class TimeseriesModel:
             # Reshape to a 2D array
             feature = feature.reshape((feature.shape[0], 1))
             # Impute missing values if necessary
-            # if np.isnan(feature).any():
             if pd.isna(feature).any():
                 feature = imputer_median.fit_transform(feature)
             # Normalize
@@ -149,15 +137,14 @@ class TimeseriesModel:
             processed_features.append(feature_sc)
 
         oneHotEncoder = OneHotEncoder()
-        imputer_dominant = SimpleImputer(missing_values=np.nan, strategy='most_frequent')
-
+        imputer_dominant = SimpleImputer(missing_values=np.nan,
+                                         strategy='most_frequent')
         for feature_name in self._nominal_features:
             # Convert to numpy array
             feature = array(df[feature_name])
             # Reshape to a 2D array
             feature = feature.reshape((feature.shape[0], 1))
             # Impute missing values if necessary
-            # if np.isnan(feature).any():
             if pd.isna(feature).any():
                 feature = imputer_dominant.fit_transform(feature)
             # Encode to one hot
@@ -165,7 +152,6 @@ class TimeseriesModel:
             processed_features.append(feature)
 
         # Process extra time-related features
-
         # For every extra datetime-related feature extracted
         for extra_feature in df_extra_datetime.columns:
             feature = array(df_extra_datetime[extra_feature])
@@ -224,40 +210,25 @@ class TimeseriesModel:
     def train_test_split(self, X, y, test_size=0.1):
         pass
 
-    def build_model(self):
+    ''' Builds inner network depending on parameters given on initialization'''
+    def build_network(self):
         global tf_graph
         with tf_graph.as_default():
-            self._compile_model()
-        # with self.__graph.as_default():
-        #     with self.__session.as_default():
-        #         self._compile_model()
+            self._build_network()
 
-    ''' Compiles inner Keras model according to the number
-        of steps and features on both input and output'''
-    def _compile_model(self):
+    ''' Compiles inner Keras model according to used type of neural network'''
+    def _build_network(self):
         pass
 
     def train_model(self, X, y, epochs):
         global tf_graph
         with tf_graph.as_default():
             self._keras_model.fit(X, y, epochs=epochs, verbose=2)
-        # with self.__graph.as_default():
-        #     with self.__session.as_default():
-        #         self._keras_model.fit(X, y, epochs=epochs, verbose=2)
-        self._n_epochs_used = epochs
-
-    # def evaluate(self, X, y):
-    #     with self.__graph.as_default():
-    #         with self.__session.as_default():
-    #             return self._keras_model.evaluate(X, y, verbose=1)
 
     def predict(self, X):
         global tf_graph
         with tf_graph.as_default():
             y_dash = self._keras_model.predict(X, verbose=1)
-        # with self.__graph.as_default():
-        #     with self.__session.as_default():
-        #         y_dash = self._keras_model.predict(X, verbose=1)
         # If the target feature was scaled, then we have to transform it back
         if self._scale_predicted_feature:
             return self._pred_feature_scaler.inverse_transform(y_dash)
@@ -278,16 +249,12 @@ class TimeseriesModel:
         pass
 
 
-''' MLP model for timeseries forecasting'''
+''' Multi Layer Perceptron model for time series'''
+
+
 class TimeseriesMLPModel(TimeseriesModel):
 
     model_name = 'MLP'
-    model_acronym = 'MLP'
-
-    # def __init__(self):
-    #     super().__init__()
-    #     self._n_inputs = None
-    #     self._n_outputs = None
 
     def _split_sequence(self, sequence, target_feature, mode):
         self._n_outputs = self._n_steps_out
@@ -315,7 +282,7 @@ class TimeseriesMLPModel(TimeseriesModel):
     def train_test_split(self, X, y, test_size=0.1):
         return sk_ms.train_test_split(X, y, test_size=test_size, shuffle=True)
 
-    def _compile_model(self):
+    def _build_network(self):
 
         self._keras_model = Sequential(name=self.model_name)
         self._keras_model.add(Dense(64, input_dim=self._n_inputs, activation='relu',
@@ -324,7 +291,6 @@ class TimeseriesMLPModel(TimeseriesModel):
                                     kernel_regularizer=keras.regularizers.l1(0.01)))
         self._keras_model.add(Dense(16, activation='relu',
                                     kernel_regularizer=keras.regularizers.l1(0.01)))
-        # self._keras_model.add(Dense(16, activation='relu'))
         self._keras_model.add(Dense(self._n_outputs, activation='linear'))
         self._keras_model.compile(optimizer=Adadelta(), loss='mae')
         print(self._keras_model.summary())
@@ -335,17 +301,11 @@ class TimeseriesMLPModel(TimeseriesModel):
         return 'MLP'
 
 
-''' Typical Convolutional Neural Network model '''
+''' Convolutional Neural Network for time series model '''
+
 class TimeseriesCNNModel(TimeseriesModel):
 
     model_name = 'CNN'
-    model_acronym = 'CNN'
-
-    # def __init__(self):
-    #     super().__init__()
-    #     self._n_outputs = None
-    #     self._n_steps_in = None
-    #     self._n_features_in = None
 
     def _split_sequence(self, sequence, target_feature, mode):
         self._n_steps_in = self._n_steps_in
@@ -373,7 +333,7 @@ class TimeseriesCNNModel(TimeseriesModel):
     def train_test_split(self, X, y, test_size=0.1):
         return sk_ms.train_test_split(X, y, test_size=test_size, shuffle=True)
 
-    def _compile_model(self):
+    def _build_network(self):
         kernel_size = min(6, self._n_steps_in - 2)
         self._keras_model = Sequential()
         self._keras_model.add(Conv1D(filters=32, kernel_size=kernel_size, activation='relu',
@@ -391,16 +351,11 @@ class TimeseriesCNNModel(TimeseriesModel):
         return 'CNN Simple'
 
 
+''' Long-Short Term Memory model for time series'''
+
 class TimeseriesLSTMModel(TimeseriesModel):
 
     model_name = 'LSTM'
-    model_acronym = 'LSTM'
-
-    # def __init__(self):
-    #     super().__init__()
-    #     self._n_outputs = None
-    #     self._n_steps_in = None
-    #     self._n_features_in = None
 
     def _split_sequence(self, sequence, target_feature, mode):
         self._n_steps_in = self._n_steps_in
@@ -428,9 +383,10 @@ class TimeseriesLSTMModel(TimeseriesModel):
     def train_test_split(self, X, y, test_size=0.1):
         return sk_ms.train_test_split(X, y, test_size=test_size, shuffle=True)
 
-    def _compile_model(self):
+    def _build_network(self):
         self._keras_model = Sequential()
-        self._keras_model.add(LSTM(units=24, activation='relu', input_shape=(self._n_steps_in, self._n_features_in),
+        self._keras_model.add(LSTM(units=24, activation='relu', input_shape=
+                    (self._n_steps_in,self._n_features_in),
                              return_sequences=True))
         self._keras_model.add(LSTM(units=24, activation='relu', return_sequences=True))
         self._keras_model.add(LSTM(units=24, activation='linear'))

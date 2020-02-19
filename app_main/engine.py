@@ -49,10 +49,29 @@ class ForecasterEngine:
 
     def __init__(self):
         self.timeseries_model = None
+        self.is_model_ready = False
+        self.train_df = None
+        self.test_df = None
         make_keras_picklable()
 
-    def init_model(self, df, model_type, predicted_feature, nominal_features, datetime_feature, extra_datetime_features,
+
+    ''' Generates a Deep Learning model for forecasting based on given data frame and options
+    model_type - name of the model type returned by radio items from the layout
+    nominal_features - list of names of features in the dataframe that are nominal
+    predicted_feature - the name of the feature we want to predict
+    datetime_feature - the name of the time-related feature
+    extra_datetime_feature - list of names of extra date/time features to be extracted from the
+                             time-related feature (year, month, hour,...)
+    n_steps_in - number of input steps of the time series for the model
+    n_steps_out - number of output steps of the time series to be predicted
+    n_train_epochs - number of epochs of model training
+    data_filename - name of the file that contained the trainig data'''
+    def init_model(self, model_type, predicted_feature, nominal_features, datetime_feature, extra_datetime_features,
                    n_steps_in, n_steps_out, data_filename):
+
+        if self.train_df is None:
+            raise Exception('No data set found to generate model.')
+
         # Parse to sets
         nominal_features = {} if nominal_features is None else set(nominal_features)
 
@@ -86,13 +105,13 @@ class ForecasterEngine:
                             'Got model type: \'{}\''.format(model_type))
 
         # Prepare data for training
-        X, y = self.timeseries_model.prepare_data(df, mode='training')
+        X, y = self.timeseries_model.prepare_data(self.train_df, mode='training')
         print('Model inputs/outputs:')
         for i in range(10):
             print(i, ':', X[i], '<--', y[i])
 
         # Compile the model
-        self.timeseries_model.build_model()
+        self.timeseries_model.build_network()
 
         # Return processed input/output sequences
         return X, y
@@ -102,7 +121,7 @@ class ForecasterEngine:
         K.clear_session()
         self.timeseries_model = new_model
 
-    # @staticmethod
+    # Splits the dataset into training and testing part
     def split_train_test(self, dataset):
         # Specify test size based on the size of full sequence
         # Minimum (30% of full sequence, 1000)
@@ -114,6 +133,9 @@ class ForecasterEngine:
         # Return two tuples - training set and testing set
         return (X_train, y_train), (X_test, y_test)
 
+    ''' Trains the timeseries model
+    train_set - preprocessed training set
+    epochs - number of epochs of training'''
     def train_model(self, train_set, epochs):
         self.timeseries_model.train_model(train_set[0], train_set[1], epochs)
 
@@ -123,10 +145,12 @@ class ForecasterEngine:
         evaluator.predict_evaluate(test_set[1], y_dash)
         return evaluator
 
-    def make_prediction(self, df):
+    def make_prediction(self):
+        if self.test_df is None:
+            raise Exception('No test data set loaded for prediction!')
         if self.timeseries_model is None:
             raise Exception('No timeseries model in use to make a prediction!')
-        X, _ = self.timeseries_model.prepare_data(df, mode='testing')
+        X, _ = self.timeseries_model.prepare_data(self.test_df, mode='testing')
         return self.timeseries_model.predict(X)
 
     # Loads model from pickled string
@@ -137,25 +161,6 @@ class ForecasterEngine:
 
     def get_model_info(self):
         return self.timeseries_model.get_model_info()
-
-
-
-    ''' Generates a Deep Learning model for forecasting based on given data frame and options
-    df - dataframe
-    model_type - name of the model type returned by radio items from the layout
-    nominal_features - list of names of features in the dataframe that are nominal
-    predicted_feature - the name of the feature we want to predict
-    datetime_feature - the name of the time-related feature
-    extra_datetime_feature - list of names of extra date/time features to be extracted from the
-                             time-related feature (year, month, hour,...)
-    n_steps_in - number of input steps of the time series for the model
-    n_steps_out - number of output steps of the time series to be predicted
-    n_train_epochs - number of epochs of model training
-    differentiate_series - should we differentiate the target feature in order to improve its modelling'''
-
-
-    ''' Returns a new dataframe of time-related features extracted from the datetime column
-    (year, quarter, month, day of month, day of week, hour, minute, second'''
 
 
 class ModelEvaluator:
@@ -206,7 +211,5 @@ class ModelEvaluator:
                 (np.arange(len(y_test)), y_dash.flatten(), y_test.flatten(), np.abs(y_test - y_dash).flatten()), axis=-1)
             tests_scores = tests_scores[tests_scores[:, 3].argsort()]
             print('\nTop 5 predictions:')
-            # for i in range(5):
-            #     print(tests_scores[i, 0], '. ', tests_scores[i, 1], ' - ', tests_scores[i, 2], sep='')
             for ts in tests_scores[:5]:
                 print(int(ts[0]), '. %.3f' % ts[1], ' - ', ts[2], ' (error=%.3f)' % ts[3], sep='')

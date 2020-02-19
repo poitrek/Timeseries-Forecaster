@@ -12,23 +12,17 @@ from dash.dependencies import Input, Output, State
 import dash_table
 import pandas as pd
 import numpy as np
-from flask_caching import Cache
 from app_main.engine import ForecasterEngine
-from app_main.layout_learn import tab_learn_section
+from app_main.layout_train import tab_train_section
 from app_main.layout_predict import tab_predict_section
 from app_main.utils import Timer
 
-external_stylesheets = ['https://codepen.io/chriddyp/pen/bWLwgP.css']
 
 app = dash.Dash(suppress_callback_exceptions=True,
                 include_assets_files=True)
 
 # Global instance of the engine (cannot be done any other way)
 engine = ForecasterEngine()
-is_model_ready = False
-
-cache = Cache(app=app.server, config={'CACHE_TYPE': 'filesystem',
-                                      'CACHE_DIR': 'app-cache'})
 
 tab_style = {
     'padding': '6px',
@@ -42,7 +36,7 @@ app.layout = html.Div([
     dcc.Tabs([
         dcc.Tab(label='Training',
                 children=[
-                    tab_learn_section
+                    tab_train_section
                 ],
                 style=tab_style, selected_style=tab_style),
         dcc.Tab(label='Prediction',
@@ -64,7 +58,7 @@ app.layout = html.Div([
 def update_div_once(children):
     return dash.no_update
 
-
+# Performs the generation and evaluation of forecasting model
 @app.callback(Output('model-gen-result-div', 'children'),
               [Input('gen-model-button', 'n_clicks')],
               [State('model-choice', 'value'),
@@ -80,17 +74,11 @@ def generate_and_evaluate_model(n_clicks, model_type, predicted_feature, nominal
                                 extra_time_features,
                                 n_steps_in, n_steps_out, n_train_epochs, data_filename):
     print('Generate_and_evaluate_model()')
-    global is_model_ready
-    # Get data frame from the cache
     try:
         timer = Timer()
         timer.start_measure_time()
-        current_df = cache.get('current_df')
-        if current_df is None:
-            raise Exception('No data set found to generate model.')
-        current_df = pickle.loads(current_df)
         validate_input(predicted_feature, time_feature, n_steps_in, n_steps_out, n_train_epochs)
-        dataset = engine.init_model(df=current_df, model_type=model_type, datetime_feature=time_feature,
+        dataset = engine.init_model(model_type=model_type, datetime_feature=time_feature,
                                     predicted_feature=predicted_feature,
                                     nominal_features=nominal_features, n_steps_in=n_steps_in, n_steps_out=n_steps_out,
                                     extra_datetime_features=extra_time_features, data_filename=data_filename)
@@ -100,16 +88,14 @@ def generate_and_evaluate_model(n_clicks, model_type, predicted_feature, nominal
         timer.stop_measure_time()
     except Exception as e:
         # Show error message to proper div
-        is_model_ready = False
+        engine.is_model_ready = False
         results = generate_error_message(e, 'Error while generating model: ')
-        model_info = html.H5('No model currently in use.')
+        # model_info = html.H5('No model currently in use.')
     else:
-        # model_cache_key = 'forecast_model_{}'.format(model_type)
-        # cache.set(model_cache_key, pickle.dumps(model))
-        is_model_ready = True
+        engine.is_model_ready = True
         results = generate_model_results(eval_score, engine.timeseries_model.model_name, predicted_feature,
                                          len(train_set[0]), timer.time_elapsed)
-        model_info = engine.get_model_info()
+        # model_info = engine.get_model_info()
     finally:
         return results
 
@@ -232,9 +218,7 @@ def generate_model_results(eval_score, model_name, feature_name, train_set_size,
 def upload_data_set(content, filename, file_separator):
     print('Upload_data_set()')
     if content is not None:
-        data_table_div, df = generate_data_table(content, filename, file_separator)
-        # Cache data frame
-        cache.set('current_df', pickle.dumps(df))
+        data_table_div = generate_data_table(content, filename, file_separator)
         return data_table_div
 
 
@@ -256,7 +240,8 @@ def generate_data_table(content, filename, separator):
         return html.Div([
             'There was an error processing this file.'
         ], style={'fontSize': 16})
-
+    # Save df to engine
+    engine.train_df = df
     rows_limit = 7
     data_table_div = html.Div([
         html.H5('Loaded dataset: \'{}\''.format(filename),
@@ -272,7 +257,7 @@ def generate_data_table(content, filename, separator):
         ),
     ],
         style={'marginTop': '10px'})
-    return data_table_div, df
+    return data_table_div
 
 
 # Enables/disables button whether data table is loaded or not
@@ -293,8 +278,7 @@ def update_model_gen_div(table):
 
 # Creates div (label+dropdown) for selecting nominal features
 def generate_select_features_div():
-    # Get current dataframe from cache
-    current_df = pickle.loads(cache.get('current_df'))
+    current_df = engine.train_df
     col_options = []
     for col in current_df.columns:
         col_options.append({'label': col, 'value': col})
@@ -305,8 +289,7 @@ def generate_select_features_div():
 
 # Creates div (label+dropdown) for selecting time feature
 def generate_select_time_feature_div():
-    # Get current dataframe from cache
-    current_df = pickle.loads(cache.get('current_df'))
+    current_df = engine.train_df
     col_options = []
     for col in current_df.columns:
         col_options.append({'label': col, 'value': col})
@@ -316,8 +299,7 @@ def generate_select_time_feature_div():
 
 
 def generate_select_predicted_feature_div():
-    # Get current dataframe from cache
-    current_df = pickle.loads(cache.get('current_df'))
+    current_df = engine.train_df
     col_options = []
     for col in current_df.columns:
         col_options.append({'label': col, 'value': col})
@@ -330,8 +312,7 @@ def generate_select_predicted_feature_div():
                Output('export-model-button', 'href')],
               [Input('model-gen-result-div', 'children')])
 def update_export_model_div(children):
-    global is_model_ready
-    if is_model_ready:
+    if engine.is_model_ready:
         return False, generate_export_href()
     else:
         return True, ''
@@ -353,8 +334,7 @@ def update_current_model_info(gen_res_div, upload_content):
     triggered = dash.callback_context.triggered[0]
     print('triggered.prop_id:', triggered['prop_id'])
     if triggered['prop_id'] == 'model-gen-result-div.children':
-        global is_model_ready
-        if is_model_ready:
+        if engine.is_model_ready:
             model = engine.timeseries_model
             return html.H4('(Internal) {}'.format(engine.get_model_info()))
         else:
@@ -371,8 +351,6 @@ def parse_uploaded_model(content):
         content_type, content_string = content.split(',')
         # Decode from 64-base string
         content_decoded = base64.b64decode(content_string)
-        # model_string = io.StringIO(content_decoded.decode('utf-8'))
-        # model = pickle.loads(content_decoded)
         engine.load_model_unpickle(content_decoded)
     except Exception as e:
         print(e)
@@ -380,7 +358,6 @@ def parse_uploaded_model(content):
             'There was an error processing the file: {}'.format(e)
         ], style={'fontSize': 16})
     else:
-        # engine.load_model(model)
         return html.H4('(Uploaded) {}'.format(engine.get_model_info()))
 
 
@@ -393,8 +370,7 @@ def upload_test_data_set(content, filename, file_separator):
     print('Upload_data_set()')
     if content is not None:
         data_table_div, df = generate_test_data_table(content, filename, file_separator)
-        # Cache data frame
-        cache.set('test_df', pickle.dumps(df))
+        engine.test_df = df
         return data_table_div
 
 
@@ -440,11 +416,7 @@ def make_prediction(n_clicks):
     if n_clicks == 0:
         return dash.no_update
     try:
-        df_test = cache.get('test_df')
-        if df_test is None:
-            raise Exception('No test data set loaded for prediction!')
-        df_test = pickle.loads(df_test)
-        y_predicted = engine.make_prediction(df_test)
+        y_predicted = engine.make_prediction()
     except Exception as e:
         return generate_error_message(e, 'Error while making prediction: ')
     else:
@@ -494,20 +466,6 @@ def generate_prediction_result(y_dash, model):
     ])
 
 
-# @app.callback([Output('download-results', 'hidden'),
-#                Output('download-results', 'href')],
-#               Input('prediction-result-div', 'children'))
-# def update_download_results(children):
-#     pass
-#
-#
-# def generate_download_results_href():
-#     file_string = 'data:text/plain;charset=utf-8,' + urllib.request.quote(model_serial)
-#     return file_string
-
-
-
 if __name__ == '__main__':
     print('Start.')
-    cache.clear()
     app.run_server(debug=True)

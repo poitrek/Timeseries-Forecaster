@@ -7,13 +7,10 @@ input_number_style = {
     'height': '32px',
     'marginLeft': '4px',
     'fontSize': 15,
-    # 'float': 'left'
 }
 
-tab_learn_section = html.Div([
+tab_train_section = html.Div([
     html.H3('Upload data set'),
-    # html.Button(id='update-loading-button',
-    #             children='Stop updating'),
     html.Div([
         dcc.Upload(
             id='upload-data',
@@ -123,14 +120,6 @@ tab_learn_section = html.Div([
                                         min=1,
                                         value=40,
                                         style=input_number_style)]),
-                # html.Label('Differentiate time series'),
-                # html.Label(['Do you want to subtract previous element from every observation in the predicted'
-                #             ' feature (may improve prediction)?',
-                #             dcc.Checklist(id='chck-differentiate-series',
-                #                           options=[{'label': '',
-                #                                     'value': 'check'}],
-                #                           style={'width': '25px'})],
-                #            style={'fontSize': 16})
             ],
                      hidden=True)
         ]),
