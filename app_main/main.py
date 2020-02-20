@@ -231,7 +231,6 @@ def generate_data_table(content, filename, separator):
     content_decoded = base64.b64decode(content_string)
     try:
         if 'csv' in filename:
-            # Assume that the user uploaded a CSV file
             df = pd.read_csv(
                 io.StringIO(content_decoded.decode('utf-8')), sep=separator,
                 low_memory=False)

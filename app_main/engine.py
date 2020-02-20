@@ -183,7 +183,6 @@ class ModelEvaluator:
         for i in range(50):
             print(i + 1, '. ', y_dash[i], ' - ', y_test[i], sep='')
         print('...')
-
         print('\nEvaluation metrics:')
         # Mean Absolute Error
         self.mae = mean_absolute_error(y_test, y_dash)
@@ -195,15 +194,8 @@ class ModelEvaluator:
         self.r2_score = r2_score(y_test, y_dash)
         print('R2 Score: %.4f' % self.r2_score)
         # Mean Absolute Percentage Error
-        # This was incorrect
-        # mape = 100 * np.mean(np.abs(1 - y_test/y_dash))
         self.mape = 100 * np.mean(np.abs(1 - y_dash / y_test))
         print('Mean absolute percentage error: %.3f' % self.mape, '%', sep='')
-        # print('ACTUAL MAPE: %.4f' % mape_true, ' %', sep='')
-        # Root Mean Square Percentage Error
-        self.rmspe = np.sqrt(np.mean((1 - y_dash / y_test) ** 2))
-        print('Root mean square percentage error: %.5f' % self.rmspe)
-
         print('y_test.shape:', y_test.shape)
         # If we predicted only one step
         if y_test.shape[-1] == 1:

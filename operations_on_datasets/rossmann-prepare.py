@@ -27,9 +27,9 @@ df['DaysSinceCompOpen'] = daysSinceCompOpen
 df = df.drop(['CompetitionOpenSinceYear', 'CompetitionOpenSinceMonth'], axis=1)
 
 df = df.sort_values(by=['Store', 'Date'])    # Ignore rows with 0 sales count
-df = df.loc[df['Store'] <= 40]
+df = df.loc[df['Store'] <= 80]
 df = df.loc[df['Sales'] != 0]
 
 print(df)
 
-df.to_csv('..\\example_data\\rossmann-store-sales-train-4040stores.csv', sep=';', index=False)
+df.to_csv('..\\example_data\\rossmann-store-sales-train-80stores.csv', sep=';', index=False)
