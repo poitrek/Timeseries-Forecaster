@@ -3,9 +3,7 @@
   <component name="ChangeListManager">
     <list default="true" id="d23e0f86-2556-47b5-b4da-881edd19650f" name="Default Changelist" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app_main/engine.py" beforeDir="false" afterPath="$PROJECT_DIR$/app_main/engine.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/app_main/main.py" beforeDir="false" afterPath="$PROJECT_DIR$/app_main/main.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/operations_on_datasets/rossmann-prepare.py" beforeDir="false" afterPath="$PROJECT_DIR$/operations_on_datasets/rossmann-prepare.py" afterDir="false" />
     </list>
     <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
     <option name="SHOW_DIALOG" value="false" />
@@ -55,7 +53,7 @@
       </list>
     </option>
   </component>
-  <component name="RunManager" selected="Python.rossmann-prepare">
+  <component name="RunManager" selected="Python.main">
     <configuration name="layout-learn" type="PythonConfigurationType" factoryName="Python" temporary="true">
       <module name="TimeSeries-Forecaster" />
       <option name="INTERPRETER_OPTIONS" value="" />
@@ -163,8 +161,8 @@
     </configuration>
     <recent_temporary>
       <list>
-        <item itemvalue="Python.rossmann-prepare" />
         <item itemvalue="Python.main" />
+        <item itemvalue="Python.rossmann-prepare" />
         <item itemvalue="Python.plot-many-traces" />
         <item itemvalue="Python.population-set" />
         <item itemvalue="Python.layout-learn" />

@@ -409,17 +409,21 @@ def generate_test_data_table(content, filename, separator):
     return data_table_div, df
 
 
-@app.callback(Output('prediction-result-div', 'children'),
+@app.callback([Output('prediction-result-div', 'children'),
+               Output('download-results', 'hidden'),
+               Output('download-results', 'href')],
               [Input('make-prediction', 'n_clicks')])
 def make_prediction(n_clicks):
     if n_clicks == 0:
-        return dash.no_update
+        return dash.no_update, dash.no_update, dash.no_update
     try:
         y_predicted = engine.make_prediction()
+
     except Exception as e:
-        return generate_error_message(e, 'Error while making prediction: ')
+        return generate_error_message(e, 'Error while making prediction: '), True, ''
     else:
-        return generate_prediction_result(y_predicted, engine.timeseries_model)
+        return generate_prediction_result(y_predicted, engine.timeseries_model), False,\
+                    generate_prediction_csv_href(y_predicted)
 
 
 def generate_prediction_result(y_dash, model):
@@ -463,6 +467,21 @@ def generate_prediction_result(y_dash, model):
                                 paper_bgcolor='#fee')
         })
     ])
+
+
+# Generates the content of downloading csv link
+def generate_prediction_csv_href(y_predicted):
+    predicted_feature_name = engine.timeseries_model.predicted_feature
+    # Number of steps predicted
+    n_steps_out = y_predicted.shape[1]
+    # List of columns names
+    cols = ['{}_step_{}'.format(predicted_feature_name, i+1) for i in range(n_steps_out)]
+    # Make a df
+    prediction_df = pd.DataFrame(y_predicted, columns=cols)
+    print('Model prediction df')
+    print(prediction_df)
+    content_bytes = bytearray(prediction_df.to_csv(), 'utf-8')
+    return 'data:text/csv;charset=utf-8,' + urllib.request.quote(content_bytes)
 
 
 if __name__ == '__main__':
